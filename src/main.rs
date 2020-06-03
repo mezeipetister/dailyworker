@@ -49,7 +49,7 @@ fn edit(application: &Application, glade: &'static str) {
 fn new(
     application: &Application,
     glade: &'static str,
-    workers: &Rc<RefCell<VecPack<Worker>>>,
+    data: &Rc<RefCell<Pack<Data>>>,
     treeview: &gtk::TreeView,
 ) {
     let builder = Builder::new_from_string(glade);
@@ -84,7 +84,7 @@ fn new(
     let entry_street: Entry = builder
         .get_object("entry_street")
         .expect("Failed to load entry street");
-    btn_save.connect_clicked(clone!(@weak workers, @weak window, @weak treeview => move |_| {
+    btn_save.connect_clicked(clone!(@weak data, @weak window, @weak treeview => move |_| {
         let name = entry_name.get_text().unwrap().to_string();
         let taj = entry_taj.get_text().unwrap().to_string();
         let tax = entry_tax.get_text().unwrap().to_string();
@@ -119,17 +119,16 @@ fn new(
             return;
         }
 
-        let new_data = Worker::new(name, taj, tax, mname, date.unwrap(), bplace, _zip.unwrap(), city, street);
-        (*workers.borrow_mut()).insert(new_data).unwrap();
+        (*data).borrow_mut().as_mut().add_new_worker(name, taj, tax, mname, date.unwrap(), bplace, _zip.unwrap(), city, street).expect("Error while adding new worker");
 
-        refresh_treeview(&treeview, &create_model(&*workers.borrow()));
+        refresh_treeview(&treeview, &create_model((*data).borrow().get_workers()));
         window.destroy();
     }));
     application.add_window(&window);
     window.show_all();
 }
 
-fn build_ui(application: &gtk::Application, glade: &'static str, data: &Data) {
+fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
     let builder = Builder::new_from_string(glade);
     let window_main: ApplicationWindow = builder
         .get_object("window_main")
@@ -147,7 +146,7 @@ fn build_ui(application: &gtk::Application, glade: &'static str, data: &Data) {
     btn_info.connect_clicked(move |x| about(x, &dialog_about));
 
     let btn_new: Button = builder.get_object("btn_new").expect("Couldnt get info new");
-    let workers = data.workers.clone();
+    let data = db.data.clone();
 
     let main_box: gtk::Box = builder.get_object("main_box").expect("Cannot get main box");
 
@@ -156,7 +155,7 @@ fn build_ui(application: &gtk::Application, glade: &'static str, data: &Data) {
     sw.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
     main_box.add(&sw);
 
-    let model = Rc::new(create_model(&*data.workers.borrow()));
+    let model = Rc::new(create_model((*data).borrow().get_workers()));
     let treeview = gtk::TreeView::new_with_model(&*model);
     treeview.set_vexpand(true);
     treeview.set_search_column(Columns::Name as i32);
@@ -165,8 +164,8 @@ fn build_ui(application: &gtk::Application, glade: &'static str, data: &Data) {
 
     add_columns(&model, &treeview);
 
-    btn_new.connect_clicked(clone!(@weak application, @weak workers => move |_| {
-        new(&application, glade, &workers, &treeview);
+    btn_new.connect_clicked(clone!(@weak application, @weak data => move |_| {
+        new(&application, glade, &data, &treeview);
     }));
 
     window_main.show_all();
@@ -183,7 +182,7 @@ struct TableData {
     street: String,
 }
 
-fn create_model(workers: &VecPack<Worker>) -> gtk::ListStore {
+fn create_model(workers: Vec<&Worker>) -> gtk::ListStore {
     let col_types: [glib::Type; 4] = [
         glib::Type::String,
         glib::Type::String,
@@ -256,8 +255,23 @@ fn add_columns(model: &Rc<gtk::ListStore>, treeview: &gtk::TreeView) {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
+struct Data {
+    employers: Vec<Employer>,
+    employer_counter: u32,
+    worker_counter: u32,
+    workers: Vec<Worker>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct Employer {
+    id: u32,
+    name: String,
+    taxnumber: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct Worker {
-    id: String,
+    id: u32,
     name: String,
     taj: String,
     taxnumber: String,
@@ -270,8 +284,9 @@ struct Worker {
     is_selected: bool,
 }
 
-impl Worker {
-    pub fn new(
+impl Data {
+    pub fn add_new_worker(
+        &mut self,
         name: String,
         taj: String,
         taxnumber: String,
@@ -281,9 +296,10 @@ impl Worker {
         zip: u32,
         city: String,
         street: String,
-    ) -> Self {
-        Worker {
-            id: id::generate_alphanumeric(4),
+    ) -> Result<(), String> {
+        self.worker_counter += 1;
+        let new_worker = Worker {
+            id: self.worker_counter,
             name,
             taj,
             taxnumber,
@@ -294,79 +310,86 @@ impl Worker {
             city,
             street,
             is_selected: false,
+        };
+        self.workers.push(new_worker);
+        Ok(())
+    }
+    pub fn update_worker_by_id(&mut self, new_worker: Worker, id: u32) -> Result<&Worker, String> {
+        for worker in &mut self.workers {
+            if worker.id == id {
+                *worker = new_worker;
+                return Ok(worker);
+            }
         }
+        Err(format!("Worker not found by ID"))
     }
-    pub fn set_name(&mut self, name: String) {
-        self.name = name;
+    pub fn get_worker_mut_by_id(&mut self, id: u32) -> Option<&mut Worker> {
+        for worker in &mut self.workers {
+            if worker.id == id {
+                return Some(worker);
+            }
+        }
+        None
     }
-    pub fn set_taj(&mut self, taj: String) {
-        self.taj = taj;
+    pub fn get_workers(&self) -> Vec<&Worker> {
+        self.workers.iter().map(|w| w).collect::<Vec<&Worker>>()
     }
-    pub fn set_taxnumber(&mut self, taxnumber: String) {
-        self.taxnumber = taxnumber;
+    pub fn get_workers_selected(&self) -> Vec<&Worker> {
+        self.workers
+            .iter()
+            .filter(|w| w.is_selected)
+            .map(|w| w)
+            .collect::<Vec<&Worker>>()
     }
-    pub fn set_mothersname(&mut self, mname: String) {
-        self.mothersname = mname
+    pub fn add_new_employer(&mut self, name: String, taxnumber: String) {
+        self.employer_counter += 1;
+        let new_employer = Employer {
+            id: self.employer_counter,
+            name,
+            taxnumber,
+        };
+        self.employers.push(new_employer);
     }
-    pub fn set_birthdate(&mut self, bdate: NaiveDate) {
-        self.birthdate = bdate;
+    pub fn get_employers(&self) -> &Vec<Employer> {
+        &self.employers
     }
-    pub fn set_birthplace(&mut self, bplace: String) {
-        self.birthplace = bplace;
-    }
-    pub fn set_zip(&mut self, zip: u32) {
-        self.zip = zip;
-    }
-    pub fn set_city(&mut self, city: String) {
-        self.city = city;
-    }
-    pub fn set_street(&mut self, street: String) {
-        self.street = street;
-    }
-    pub fn set_is_selected(&mut self, value: bool) {
-        self.is_selected = value;
+    pub fn get_employer_mut_by_id(&mut self, id: u32) -> Option<&mut Employer> {
+        for employer in &mut self.employers {
+            if employer.id == id {
+                return Some(employer);
+            }
+        }
+        None
     }
 }
 
-impl Default for Worker {
+impl Default for Data {
     fn default() -> Self {
-        Worker {
-            id: String::default(),
-            name: String::default(),
-            taj: String::default(),
-            taxnumber: String::default(),
-            mothersname: String::default(),
-            birthdate: Utc::today().naive_utc(),
-            birthplace: String::default(),
-            zip: 0,
-            city: String::default(),
-            street: String::default(),
-            is_selected: false,
+        Data {
+            employers: Vec::new(),
+            employer_counter: 0,
+            worker_counter: 0,
+            workers: Vec::new(),
         }
     }
 }
 
-impl VecPackMember for Worker {
-    fn get_id(&self) -> &str {
-        &self.id
-    }
+impl TryFrom for Data {
+    type TryFrom = Data;
 }
 
-impl TryFrom for Worker {
-    type TryFrom = Worker;
-}
-
-struct Data {
-    workers: Rc<RefCell<VecPack<Worker>>>,
+struct Db {
+    data: Rc<RefCell<Pack<Data>>>,
 }
 
 fn main() {
-    let data = Data {
-        workers: Rc::new(RefCell::new(
-            VecPack::try_load_or_init(
+    let db = Db {
+        data: Rc::new(RefCell::new(
+            Pack::try_load_or_init(
                 dirs::home_dir()
                     .expect("Error while getting your home folder")
                     .join(".dailyworkerdb"),
+                "workersdb",
             )
             .expect("Error loading workers db"),
         )),
@@ -377,7 +400,7 @@ fn main() {
 
     let glade_src = include_str!("../data/ui/design.glade");
 
-    application.connect_activate(move |app| build_ui(app, &glade_src, &data));
+    application.connect_activate(move |app| build_ui(app, &glade_src, &db));
 
     application.run(&args().collect::<Vec<_>>());
 }
