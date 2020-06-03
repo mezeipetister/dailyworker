@@ -46,7 +46,8 @@ fn edit(application: &Application, glade: &'static str) {
     window.show_all();
 }
 
-fn new(
+fn new_or_edit(
+    worker_id: Option<u32>,
     application: &Application,
     glade: &'static str,
     data: &Rc<RefCell<Pack<Data>>>,
@@ -84,6 +85,25 @@ fn new(
     let entry_street: Entry = builder
         .get_object("entry_street")
         .expect("Failed to load entry street");
+
+    if let Some(id) = worker_id {
+        let mut data = data.borrow_mut();
+        let mut _worker = data.as_mut();
+        let worker: &mut Worker = _worker
+            .get_worker_mut_by_id(id)
+            .expect("Failed to get worker by id");
+
+        entry_name.set_text(&worker.name);
+        entry_taj.set_text(&worker.taj);
+        entry_tax.set_text(&worker.taxnumber);
+        entry_mothersname.set_text(&worker.mothersname);
+        entry_birthdate.set_text(&worker.birthdate.to_string());
+        entry_birthplace.set_text(&worker.birthplace);
+        entry_zip.set_text(&format!("{}", &worker.zip));
+        entry_city.set_text(&worker.city);
+        entry_street.set_text(&worker.street);
+    }
+
     btn_save.connect_clicked(clone!(@weak data, @weak window, @weak treeview => move |_| {
         let name = entry_name.get_text().unwrap().to_string();
         let taj = entry_taj.get_text().unwrap().to_string();
@@ -119,7 +139,26 @@ fn new(
             return;
         }
 
-        (*data).borrow_mut().as_mut().add_new_worker(name, taj, tax, mname, date.unwrap(), bplace, _zip.unwrap(), city, street).expect("Error while adding new worker");
+        if let Some(id) = worker_id {
+            let mut data = data.borrow_mut();
+            let mut _worker = data.as_mut();
+            let mut worker: &mut Worker = _worker
+            .get_worker_mut_by_id(id)
+            .expect("Failed to get worker by id");
+
+            worker.name = name;
+            worker.taj = taj;
+            worker.taxnumber = tax;
+            worker.mothersname = mname;
+            worker.birthdate = date.unwrap();
+            worker.birthplace = bplace;
+            worker.zip = _zip.unwrap();
+            worker.city = city;
+            worker.street = street;
+
+        } else {
+            (*data).borrow_mut().as_mut().add_new_worker(name, taj, tax, mname, date.unwrap(), bplace, _zip.unwrap(), city, street).expect("Error while adding new worker");
+        }
 
         refresh_treeview(&treeview, &create_model((*data).borrow().get_workers()));
         window.destroy();
@@ -148,24 +187,80 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
     let btn_new: Button = builder.get_object("btn_new").expect("Couldnt get info new");
     let data = db.data.clone();
 
-    let main_box: gtk::Box = builder.get_object("main_box").expect("Cannot get main box");
+    let left_panel: gtk::Box = builder
+        .get_object("left_panel")
+        .expect("Cannot get main box");
+
+    let right_panel: gtk::Box = builder
+        .get_object("right_panel")
+        .expect("Cannot get main box");
 
     let sw = gtk::ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
     sw.set_shadow_type(gtk::ShadowType::EtchedIn);
     sw.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
-    main_box.add(&sw);
+
+    left_panel.add(&sw);
 
     let model = Rc::new(create_model((*data).borrow().get_workers()));
     let treeview = gtk::TreeView::new_with_model(&*model);
     treeview.set_vexpand(true);
     treeview.set_search_column(Columns::Name as i32);
+    let m2 = model.clone();
+
+    treeview.connect_row_activated(|a, b, c| {
+        let model = a.get_model().unwrap();
+        let iter = model.get_iter(b).unwrap();
+        let id = model
+            .get_value(&iter, Columns::Id as i32)
+            .get_some::<u32>()
+            .unwrap();
+        println!("Activated at id {}", id);
+    });
+
+    treeview.connect_button_press_event(move |treeview, event| {
+        if event.get_event_type() == gdk::EventType::ButtonPress && event.get_button() == 3 {
+            let (x, y) = event.get_coords().expect("Couldnt get click coordinates");
+            let (path, _, _, _) = treeview
+                .get_path_at_pos(x as i32, y as i32)
+                .expect("Error while getting path at pos");
+            let model = treeview.get_model().unwrap();
+            let iter = model.get_iter(&path.unwrap()).unwrap();
+            let id = model
+                .get_value(&iter, Columns::Id as i32)
+                .get_some::<u32>()
+                .unwrap();
+            println!("Right click at id {}", id);
+        }
+        // if event.get_event_type() == gdk::EventType::ButtonPress && event.get_button() == 3 {
+        //     let (model, iter) = treeview.get_selection().get_selected().unwrap();
+        //     let id = model
+        //         .get_value(&iter, Columns::Id as i32)
+        //         .get_some::<u32>()
+        //         .unwrap();
+        //     println!("model: {}", id);
+        // }
+        Inhibit(false)
+    });
 
     sw.add(&treeview);
 
     add_columns(&model, &treeview);
 
+    // Code for the right panel
+
+    let sw2 = gtk::ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
+    sw2.set_shadow_type(gtk::ShadowType::EtchedIn);
+    sw2.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
+    right_panel.add(&sw2);
+    let model_selected = Rc::new(create_model((*data).borrow().get_workers_selected()));
+    let treeview2 = gtk::TreeView::new_with_model(&*model_selected);
+    treeview2.set_vexpand(true);
+    treeview2.set_search_column(Columns::Name as i32);
+    sw2.add(&treeview2);
+    add_columns(&model_selected, &treeview2);
+
     btn_new.connect_clicked(clone!(@weak application, @weak data => move |_| {
-        new(&application, glade, &data, &treeview);
+        new_or_edit(None, &application, glade, &data, &treeview);
     }));
 
     window_main.show_all();
@@ -183,7 +278,8 @@ struct TableData {
 }
 
 fn create_model(workers: Vec<&Worker>) -> gtk::ListStore {
-    let col_types: [glib::Type; 4] = [
+    let col_types: [glib::Type; 5] = [
+        glib::Type::U32,
         glib::Type::String,
         glib::Type::String,
         glib::Type::String,
@@ -192,10 +288,11 @@ fn create_model(workers: Vec<&Worker>) -> gtk::ListStore {
 
     let store = gtk::ListStore::new(&col_types);
 
-    let col_indices: [u32; 4] = [0, 1, 2, 3];
+    let col_indices: [u32; 5] = [0, 1, 2, 3, 4];
 
     for (d_idx, w) in workers.iter().enumerate() {
-        let values: [&dyn ToValue; 4] = [&w.name, &w.birthdate.to_string(), &w.city, &w.street];
+        let values: [&dyn ToValue; 5] =
+            [&w.id, &w.name, &w.birthdate.to_string(), &w.city, &w.street];
         store.set(&store.append(), &col_indices, &values);
     }
 
@@ -205,6 +302,7 @@ fn create_model(workers: Vec<&Worker>) -> gtk::ListStore {
 #[derive(Debug)]
 #[repr(i32)]
 enum Columns {
+    Id,
     Name,
     Birthdate,
     City,
@@ -212,6 +310,16 @@ enum Columns {
 }
 
 fn add_columns(model: &Rc<gtk::ListStore>, treeview: &gtk::TreeView) {
+    // // Column for id
+    // {
+    //     let renderer = gtk::CellRendererText::new();
+    //     let column = gtk::TreeViewColumn::new();
+    //     column.pack_start(&renderer, true);
+    //     column.set_title("ID");
+    //     column.add_attribute(&renderer, "text", Columns::Id as i32);
+    //     column.set_sort_column_id(Columns::Id as i32);
+    //     treeview.append_column(&column);
+    // }
     // Column for name
     {
         let renderer = gtk::CellRendererText::new();
@@ -340,6 +448,12 @@ impl Data {
             .filter(|w| w.is_selected)
             .map(|w| w)
             .collect::<Vec<&Worker>>()
+    }
+    pub fn remove_worker_by_id(&mut self, id: u32) -> Option<Worker> {
+        if let Some(pos) = self.workers.iter().position(|x| x.id == id) {
+            return Some(self.workers.remove(pos));
+        }
+        None
     }
     pub fn add_new_employer(&mut self, name: String, taxnumber: String) {
         self.employer_counter += 1;
