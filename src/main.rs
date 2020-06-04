@@ -376,35 +376,32 @@ fn refresh_treeview(treeview: &gtk::TreeView, model: &gtk::ListStore) {
     treeview.set_model(Some(model));
 }
 
-struct TableData {
-    name: String,
-    bdate: String,
-    city: String,
-    street: String,
-}
-
 fn create_model(workers: Vec<&Worker>) -> gtk::ListStore {
-    let col_types: [glib::Type; 6] = [
+    let col_types: [glib::Type; 8] = [
         glib::Type::U32,
         glib::Type::String,
         glib::Type::String,
         glib::Type::String,
         glib::Type::String,
         glib::Type::Bool,
+        glib::Type::String,
+        glib::Type::String,
     ];
 
     let store = gtk::ListStore::new(&col_types);
 
-    let col_indices: [u32; 6] = [0, 1, 2, 3, 4, 5];
+    let col_indices: [u32; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
 
     for (d_idx, w) in workers.iter().enumerate() {
-        let values: [&dyn ToValue; 6] = [
+        let values: [&dyn ToValue; 8] = [
             &w.id,
             &w.name,
             &w.birthdate.to_string(),
             &w.city,
             &w.street,
             &w.is_selected,
+            &w.taxnumber,
+            &w.taj,
         ];
         store.set(&store.append(), &col_indices, &values);
     }
@@ -421,6 +418,8 @@ enum Columns {
     City,
     Street,
     IsSelected,
+    Tax,
+    TAJ,
 }
 
 fn add_columns(model: &Rc<gtk::ListStore>, treeview: &gtk::TreeView) {
@@ -445,7 +444,7 @@ fn add_columns(model: &Rc<gtk::ListStore>, treeview: &gtk::TreeView) {
         // }));
         let column = gtk::TreeViewColumn::new();
         column.pack_start(&renderer, true);
-        column.set_title("Kiválasztva?");
+        column.set_title("");
         column.add_attribute(&renderer, "active", Columns::IsSelected as i32);
         column.set_sizing(gtk::TreeViewColumnSizing::Fixed);
         column.set_fixed_width(50);
@@ -489,6 +488,26 @@ fn add_columns(model: &Rc<gtk::ListStore>, treeview: &gtk::TreeView) {
         column.set_title("Utca, házszám");
         column.add_attribute(&renderer, "text", Columns::Street as i32);
         column.set_sort_column_id(Columns::Street as i32);
+        treeview.append_column(&column);
+    }
+    // Column for taxnumber
+    {
+        let renderer = gtk::CellRendererText::new();
+        let column = gtk::TreeViewColumn::new();
+        column.pack_start(&renderer, true);
+        column.set_title("Adóazonosító");
+        column.add_attribute(&renderer, "text", Columns::Tax as i32);
+        column.set_sort_column_id(Columns::Tax as i32);
+        treeview.append_column(&column);
+    }
+    // Column for TAJ
+    {
+        let renderer = gtk::CellRendererText::new();
+        let column = gtk::TreeViewColumn::new();
+        column.pack_start(&renderer, true);
+        column.set_title("Tajszám");
+        column.add_attribute(&renderer, "text", Columns::TAJ as i32);
+        column.set_sort_column_id(Columns::TAJ as i32);
         treeview.append_column(&column);
     }
 }

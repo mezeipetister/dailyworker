@@ -1,0 +1,11 @@
+Új munkavállaló létrehozása model átkötés
+
+Munkavállaló szerkesztése
+
+A bal oldali lista mutasson majdnem minden adatot, a jobb oldali legyen vezérlők nélkül, és csak a legfontosabb adatokat mutassa. A jobb oldal egyetlen vezérlője a dupla klikkes törlés legyen.
+
+Munkavállaló új / szerkesztés, kiszervezni és egységesíteni
+
+Munkavállalók új, szerkesztés, törlés, auto szinkron a jobb oldallal
+
+Export folyamat és XML export
