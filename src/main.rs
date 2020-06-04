@@ -54,10 +54,9 @@ fn new_or_edit(
     treeview: &gtk::TreeView,
 ) {
     let builder = Builder::new_from_string(glade);
-    let window: Window = builder
-        .get_object("window_edit")
-        .expect("Couldn't get window edit");
-    let btn_save: Button = builder.get_object("btn_save").expect("Cannot get btn save");
+    let dialog: gtk::Dialog = builder
+        .get_object("dialog_edit")
+        .expect("Couldn't get dialog edit");
     let entry_name: Entry = builder
         .get_object("entry_name")
         .expect("Failed to load entry name");
@@ -86,6 +85,32 @@ fn new_or_edit(
         .get_object("entry_street")
         .expect("Failed to load entry street");
 
+    // Render save button
+    let btn_save: Button = builder.get_object("btn_save").expect("Cannot get btn save");
+
+    // Set response OK when save button clicked
+    btn_save
+        .connect_clicked(clone!(@weak dialog => move |_| dialog.response(gtk::ResponseType::Ok)));
+
+    // Render cancel button
+    let btn_cancel: Button = builder
+        .get_object("btn_cancel")
+        .expect("Cannot get btn cancel");
+
+    btn_cancel.connect_clicked(clone!(@weak dialog => move |_| {
+        dialog.response(gtk::ResponseType::Cancel);
+        dialog.destroy();
+    }));
+
+    // entry_birthdate
+    //     .bind_property("text", &entry_birthplace, "text")
+    //     .flags(
+    //         glib::BindingFlags::DEFAULT
+    //             | glib::BindingFlags::SYNC_CREATE
+    //             | glib::BindingFlags::BIDIRECTIONAL,
+    //     )
+    //     .build();
+
     if let Some(id) = worker_id {
         let mut data = data.borrow_mut();
         let mut _worker = data.as_mut();
@@ -104,7 +129,7 @@ fn new_or_edit(
         entry_street.set_text(&worker.street);
     }
 
-    btn_save.connect_clicked(clone!(@weak data, @weak window, @weak treeview => move |_| {
+    btn_save.connect_clicked(clone!(@weak data, @weak dialog, @weak treeview => move |_| {
         let name = entry_name.get_text().unwrap().to_string();
         let taj = entry_taj.get_text().unwrap().to_string();
         let tax = entry_tax.get_text().unwrap().to_string();
@@ -161,10 +186,10 @@ fn new_or_edit(
         }
 
         refresh_treeview(&treeview, &create_model((*data).borrow().get_workers()));
-        window.destroy();
+        dialog.destroy();
     }));
-    application.add_window(&window);
-    window.show_all();
+    application.add_window(&dialog);
+    dialog.show_all();
 }
 
 fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
@@ -205,18 +230,114 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
     let treeview = gtk::TreeView::new_with_model(&*model);
     treeview.set_vexpand(true);
     treeview.set_search_column(Columns::Name as i32);
-    let m2 = model.clone();
 
-    treeview.connect_row_activated(|a, b, c| {
+    sw.add(&treeview.clone());
+
+    add_columns(&model, &treeview);
+
+    // Code for the right panel
+
+    let sw2 = gtk::ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
+    sw2.set_shadow_type(gtk::ShadowType::EtchedIn);
+    sw2.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
+    right_panel.add(&sw2);
+    let model_selected = Rc::new(create_model((*data).borrow().get_workers_selected()));
+    let treeview2 = gtk::TreeView::new_with_model(&*model_selected);
+    treeview2.set_vexpand(true);
+    treeview2.set_search_column(Columns::Name as i32);
+    sw2.add(&treeview2);
+    add_columns(&model_selected, &treeview2);
+
+    btn_new.connect_clicked(
+        clone!(@weak application, @weak data, @weak treeview => move |_| {
+            new_or_edit(None, &application, glade, &data, &treeview);
+        }),
+    );
+
+    model.connect_row_changed(|s, path, iter| {
+        let id = s
+            .get_value(iter, Columns::Id as i32)
+            .get_some::<u32>()
+            .unwrap();
+        println!("Row changed! Id {}", id);
+    });
+
+    let data = db.data.clone();
+    let m = model.clone();
+    // Left douple click & enter action
+    treeview.connect_row_activated(clone!(@weak data, @weak treeview2 => move |a, b, _| {
         let model = a.get_model().unwrap();
         let iter = model.get_iter(b).unwrap();
         let id = model
             .get_value(&iter, Columns::Id as i32)
             .get_some::<u32>()
             .unwrap();
-        println!("Activated at id {}", id);
-    });
+        let is_selected = model
+            .get_value(&iter, Columns::IsSelected as i32)
+            .get_some::<bool>()
+            .unwrap();
+        let change_to = match is_selected {
+            true => false,
+            false => true,
+        };
+        {
+            let _ = data.borrow_mut().as_mut().set_worker_selected_by_id(id, change_to);
+        }
 
+        let tv: &dyn ToValue = &change_to;
+        m.set_value(&iter, Columns::IsSelected as u32, &tv.to_value());
+
+        update_right_panel(&treeview2, &data.borrow());
+
+        println!("Activated at id {}", id);
+    }));
+
+    let m2 = model.clone();
+    treeview.connect_key_press_event(
+        clone!(@weak window_main => @default-return Inhibit(false), move |treeview, event| {
+            // If del pressed
+            if event.get_hardware_keycode() == 119 {
+                let dialog = gtk::Dialog::new_with_buttons(
+                    Some("Biztosan törlöd?"),
+                    Some(&window_main),
+                    gtk::DialogFlags::MODAL,
+                    &[
+                        ("Törlés", gtk::ResponseType::Ok),
+                        ("Mégsem", gtk::ResponseType::Cancel),
+                    ],
+                );
+                dialog.set_default_response(gtk::ResponseType::Ok);
+                let label = gtk::Label::new(Some("Biztosan törlöd\na kiválasztott munkavállalót?"));
+                label.set_justify(gtk::Justification::Center);
+                label.set_margin_start(19);
+                label.set_margin_end(19);
+                label.set_margin_top(19);
+                label.set_margin_bottom(19);
+                dialog.get_content_area().add(&label);
+
+                dialog.connect_response(
+                    clone!(@weak treeview, @weak data, @weak m2 => move |dialog, resp| {
+                        if resp == gtk::ResponseType::Ok {
+                            let (model, iter) = treeview.get_selection().get_selected().unwrap();
+                            let id = model
+                                .get_value(&iter, Columns::Id as i32)
+                                .get_some::<u32>()
+                                .unwrap();
+                            // Try to remove worker from Pack by ID
+                            if let Some(_) = data.borrow_mut().as_mut().remove_worker_by_id(id) {
+                                // If success, then remove from liststore as well
+                                (*m2).remove(&iter);
+                            }
+                        }
+                        dialog.destroy();
+                    }),
+                );
+                dialog.show_all();
+            }
+            gtk::Inhibit(false)
+        }),
+    );
+    // Right click action
     treeview.connect_button_press_event(move |treeview, event| {
         if event.get_event_type() == gdk::EventType::ButtonPress && event.get_button() == 3 {
             let (x, y) = event.get_coords().expect("Couldnt get click coordinates");
@@ -242,28 +363,13 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
         Inhibit(false)
     });
 
-    sw.add(&treeview);
-
-    add_columns(&model, &treeview);
-
-    // Code for the right panel
-
-    let sw2 = gtk::ScrolledWindow::new(None::<&gtk::Adjustment>, None::<&gtk::Adjustment>);
-    sw2.set_shadow_type(gtk::ShadowType::EtchedIn);
-    sw2.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Automatic);
-    right_panel.add(&sw2);
-    let model_selected = Rc::new(create_model((*data).borrow().get_workers_selected()));
-    let treeview2 = gtk::TreeView::new_with_model(&*model_selected);
-    treeview2.set_vexpand(true);
-    treeview2.set_search_column(Columns::Name as i32);
-    sw2.add(&treeview2);
-    add_columns(&model_selected, &treeview2);
-
-    btn_new.connect_clicked(clone!(@weak application, @weak data => move |_| {
-        new_or_edit(None, &application, glade, &data, &treeview);
-    }));
-
     window_main.show_all();
+}
+
+fn update_right_panel(treeview: &gtk::TreeView, data: &Data) {
+    let model_selected = Rc::new(create_model(data.get_workers_selected()));
+    treeview.set_vexpand(true);
+    treeview.set_model(Some(&*model_selected));
 }
 
 fn refresh_treeview(treeview: &gtk::TreeView, model: &gtk::ListStore) {
@@ -278,21 +384,28 @@ struct TableData {
 }
 
 fn create_model(workers: Vec<&Worker>) -> gtk::ListStore {
-    let col_types: [glib::Type; 5] = [
+    let col_types: [glib::Type; 6] = [
         glib::Type::U32,
         glib::Type::String,
         glib::Type::String,
         glib::Type::String,
         glib::Type::String,
+        glib::Type::Bool,
     ];
 
     let store = gtk::ListStore::new(&col_types);
 
-    let col_indices: [u32; 5] = [0, 1, 2, 3, 4];
+    let col_indices: [u32; 6] = [0, 1, 2, 3, 4, 5];
 
     for (d_idx, w) in workers.iter().enumerate() {
-        let values: [&dyn ToValue; 5] =
-            [&w.id, &w.name, &w.birthdate.to_string(), &w.city, &w.street];
+        let values: [&dyn ToValue; 6] = [
+            &w.id,
+            &w.name,
+            &w.birthdate.to_string(),
+            &w.city,
+            &w.street,
+            &w.is_selected,
+        ];
         store.set(&store.append(), &col_indices, &values);
     }
 
@@ -307,6 +420,7 @@ enum Columns {
     Birthdate,
     City,
     Street,
+    IsSelected,
 }
 
 fn add_columns(model: &Rc<gtk::ListStore>, treeview: &gtk::TreeView) {
@@ -320,6 +434,23 @@ fn add_columns(model: &Rc<gtk::ListStore>, treeview: &gtk::TreeView) {
     //     column.set_sort_column_id(Columns::Id as i32);
     //     treeview.append_column(&column);
     // }
+    // Column for fixed toggles
+    {
+        let renderer = gtk::CellRendererToggle::new();
+        renderer.set_activatable(false);
+        // renderer.connect_toggled(clone!(@weak treeview => move |a, b| {
+        //     let model = treeview.get_model().unwrap();
+        //     let iter = model.get_iter(&b).unwrap();
+        //     let a = treeview.get_selection().get_selected();
+        // }));
+        let column = gtk::TreeViewColumn::new();
+        column.pack_start(&renderer, true);
+        column.set_title("Kiválasztva?");
+        column.add_attribute(&renderer, "active", Columns::IsSelected as i32);
+        column.set_sizing(gtk::TreeViewColumnSizing::Fixed);
+        column.set_fixed_width(50);
+        treeview.append_column(&column);
+    }
     // Column for name
     {
         let renderer = gtk::CellRendererText::new();
@@ -434,6 +565,15 @@ impl Data {
     pub fn get_worker_mut_by_id(&mut self, id: u32) -> Option<&mut Worker> {
         for worker in &mut self.workers {
             if worker.id == id {
+                return Some(worker);
+            }
+        }
+        None
+    }
+    pub fn set_worker_selected_by_id(&mut self, id: u32, selected: bool) -> Option<&mut Worker> {
+        for worker in &mut self.workers {
+            if worker.id == id {
+                worker.is_selected = selected;
                 return Some(worker);
             }
         }
