@@ -556,92 +556,72 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
             }));
 
         dialog.show_all();
-        // let change_to = match is_selected {
-        //     true => false,
-        //     false => true,
-        // };
-        // {
-        //     let _ = data.borrow_mut().as_mut().set_worker_selected_by_id(id, change_to);
-        // }
-
-        // let tv: &dyn ToValue = &change_to;
-        // m.set_value(&iter, Columns::IsSelected as u32, &tv.to_value());
     }));
 
-//     let m2 = model.clone();
-//     treeview.connect_key_press_event(
-//         clone!(@weak window_main => @default-return Inhibit(false), move |treeview, event| {
-//             // If del pressed
-//             if event.get_hardware_keycode() == 119 {
-//                 let dialog = gtk::Dialog::new_with_buttons(
-//                     Some("Biztosan törlöd?"),
-//                     Some(&window_main),
-//                     gtk::DialogFlags::MODAL,
-//                     &[
-//                         ("Törlés", gtk::ResponseType::Ok),
-//                         ("Mégsem", gtk::ResponseType::Cancel),
-//                     ],
-//                 );
-//                 dialog.set_default_response(gtk::ResponseType::Ok);
-//                 let label = gtk::Label::new(Some("Biztosan törlöd\na kiválasztott munkavállalót?"));
-//                 label.set_justify(gtk::Justification::Center);
-//                 label.set_margin_start(19);
-//                 label.set_margin_end(19);
-//                 label.set_margin_top(19);
-//                 label.set_margin_bottom(19);
-//                 dialog.get_content_area().add(&label);
+    treeview_left.connect_key_press_event(
+        clone!(@weak window_main, @strong model as m2 => @default-return Inhibit(false), move |treeview, event| {
+            // If del pressed
+            if event.get_hardware_keycode() == 119 {
+                let dialog = gtk::Dialog::new_with_buttons(
+                    Some("Biztosan törlöd?"),
+                    Some(&window_main),
+                    gtk::DialogFlags::MODAL,
+                    &[
+                        ("Törlés", gtk::ResponseType::Ok),
+                        ("Mégsem", gtk::ResponseType::Cancel),
+                    ],
+                );
+                dialog.set_default_response(gtk::ResponseType::Ok);
+                let label = gtk::Label::new(Some("Biztosan törlöd\na kiválasztott munkavállalót?"));
+                label.set_justify(gtk::Justification::Center);
+                label.set_margin_start(19);
+                label.set_margin_end(19);
+                label.set_margin_top(19);
+                label.set_margin_bottom(19);
+                dialog.get_content_area().add(&label);
 
-//                 dialog.connect_response(
-//                     clone!(@weak treeview, @weak data, @weak m2 => move |dialog, resp| {
-//                         if resp == gtk::ResponseType::Ok {
-//                             let (model, iter) = treeview.get_selection().get_selected().unwrap();
-//                             let id = model
-//                                 .get_value(&iter, Columns::Id as i32)
-//                                 .get_some::<u32>()
-//                                 .unwrap();
-//                             // Try to remove worker from Pack by ID
-//                             if let Some(_) = data.borrow_mut().as_mut().remove_worker_by_id(id) {
-//                                 // If success, then remove from liststore as well
-//                                 (*m2).remove(&iter);
-//                             }
-//                         }
-//                         dialog.destroy();
-//                     }),
-//                 );
-//                 dialog.show_all();
-//             }
-//             gtk::Inhibit(false)
-//         }),
-//     );
-//     // Right click action
-//     treeview.connect_button_press_event(move |treeview, event| {
-//         if event.get_event_type() == gdk::EventType::ButtonPress && event.get_button() == 3 {
-//             let (x, y) = event.get_coords().expect("Couldnt get click coordinates");
-//             let (path, _, _, _) = treeview
-//                 .get_path_at_pos(x as i32, y as i32)
-//                 .expect("Error while getting path at pos");
-//             let model = treeview.get_model().unwrap();
-//             let iter = model.get_iter(&path.unwrap()).unwrap();
-//             let id = model
-//                 .get_value(&iter, Columns::Id as i32)
-//                 .get_some::<u32>()
-//                 .unwrap();
-//             println!("Right click at id {}", id);
-//         }
-//         Inhibit(false)
-//     });
+                dialog.connect_response(
+                    clone!(@weak treeview, @weak data, @weak m2, @weak model_selected => move |dialog, resp| {
+                        if resp == gtk::ResponseType::Ok {
+                            let (model, iter) = treeview.get_selection().get_selected().unwrap();
+                            let id = model
+                                .get_value(&iter, model::Columns::Id as i32)
+                                .get_some::<u32>()
+                                .unwrap();
+                            // Try to remove worker from Pack by ID
+                            if let Some(_) = data.borrow_mut().as_mut().remove_worker_by_id(id) {
+                                // If success, then remove from liststore as well
+                                (*m2).remove(&iter);
+                            }
+                            model::update_model(&*model_selected, (*data).borrow().get_workers_selected());
+                        }
+                        dialog.destroy();
+                    }),
+                );
+                dialog.show_all();
+            }
+            gtk::Inhibit(false)
+        }),
+    );
+    // Right click action
+    // treeview.connect_button_press_event(move |treeview, event| {
+    //     if event.get_event_type() == gdk::EventType::ButtonPress && event.get_button() == 3 {
+    //         let (x, y) = event.get_coords().expect("Couldnt get click coordinates");
+    //         let (path, _, _, _) = treeview
+    //             .get_path_at_pos(x as i32, y as i32)
+    //             .expect("Error while getting path at pos");
+    //         let model = treeview.get_model().unwrap();
+    //         let iter = model.get_iter(&path.unwrap()).unwrap();
+    //         let id = model
+    //             .get_value(&iter, Columns::Id as i32)
+    //             .get_some::<u32>()
+    //             .unwrap();
+    //         println!("Right click at id {}", id);
+    //     }
+    //     Inhibit(false)
+    // });
 
     window_main.show_all();
-}
-
-// fn update_right_panel(treeview: &gtk::TreeView, data: &Data) {
-//     let model_selected = Rc::new(create_model(data.get_workers_selected()));
-//     treeview.set_vexpand(true);
-//     treeview.set_model(Some(&*model_selected));
-// }
-
-fn refresh_treeview(treeview: &gtk::TreeView, model: &gtk::ListStore) {
-    treeview.set_model(Some(model));
 }
 
 // Application DB
