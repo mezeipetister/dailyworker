@@ -663,7 +663,6 @@ kiválasztásához.</property>
       <object class="GtkBox" id="main_box">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
-        <property name="homogeneous">True</property>
         <child>
           <object class="GtkBox" id="left_panel">
             <property name="visible">True</property>
@@ -697,6 +696,7 @@ kiválasztásához.</property>
           <object class="GtkBox" id="right_panel">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
+            <property name="hexpand">True</property>
             <property name="orientation">vertical</property>
             <child>
               <object class="GtkLabel">
