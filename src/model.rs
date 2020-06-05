@@ -126,10 +126,11 @@ pub fn add_columns_left(model: &Rc<gtk::ListStore>, treeview: &gtk::TreeView) {
         renderer.connect_toggled(move |w, path| fixed_toggled(&model_clone, w, path));
         let column = gtk::TreeViewColumn::new();
         column.pack_start(&renderer, true);
-        column.set_title("");
+        column.set_title("?");
         column.add_attribute(&renderer, "active", Columns::IsSelected as i32);
         column.set_sizing(gtk::TreeViewColumnSizing::Fixed);
         column.set_fixed_width(50);
+        column.set_sort_column_id(Columns::IsSelected as i32);
         treeview.append_column(&column);
     }
     // Column for name
