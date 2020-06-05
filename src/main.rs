@@ -94,12 +94,13 @@ fn build_edit_dialog(
 
     let force_alphanumeric = |e: &Entry| {
         e.connect_insert_text(|entry, text, _| {
-            if !text.parse::<u32>().is_ok() 
+            if !text.parse::<u64>().is_ok() 
             {
                 // entry.delete_text(*p-1, *p);
                 // entry.block_signal(???);
                 // e.insert_text(&"1", position);
                 // entry.unblock_signal(???);
+                println!("This char is not valid alphanumeric! >{}<", text);
                 entry.stop_signal_emission("insert_text");
             }
         });
@@ -460,7 +461,6 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
     }));
 
     let data = db.data.clone();
-    let m = model.clone();
     // Left douple click & enter action
     treeview_left.connect_row_activated(clone!(@weak application, @weak data, @weak treeview_left, @strong model as _model => move |a, b, _| {
         let model = a.get_model().unwrap();
@@ -473,10 +473,10 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
             .get_some::<u32>()
             .unwrap();
 
-        let is_selected = model
-            .get_value(&iter, model::Columns::IsSelected as i32)
-            .get_some::<bool>()
-            .unwrap();
+        // let is_selected = model
+        //     .get_value(&iter, model::Columns::IsSelected as i32)
+        //     .get_some::<bool>()
+        //     .unwrap();
 
         entries.name.set_text(&model
             .get_value(&iter, model::Columns::Name as i32).get::<String>().unwrap().unwrap());
@@ -484,8 +484,6 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
             .get_value(&iter, model::Columns::Mname as i32).get::<String>().unwrap().unwrap());
         entries.taj.set_text(&model
             .get_value(&iter, model::Columns::TAJ as i32).get::<String>().unwrap().unwrap());
-        entries.tax.set_text(&model
-            .get_value(&iter, model::Columns::Tax as i32).get::<String>().unwrap().unwrap());
         entries.bplace.set_text(&model
             .get_value(&iter, model::Columns::Birthplace as i32).get::<String>().unwrap().unwrap());
         entries.bdate.set_text(&model
@@ -496,6 +494,10 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
             .get_value(&iter, model::Columns::City as i32).get::<String>().unwrap().unwrap().to_string());
         entries.street.set_text(&model
             .get_value(&iter, model::Columns::Street as i32).get::<String>().unwrap().unwrap().to_string());
+        let tax = model
+        .get_value(&iter, model::Columns::Tax as i32).get::<String>().unwrap().unwrap().to_string();
+        println!("Tax {}", &tax);
+        entries.tax.set_text(&tax);
 
             dialog.connect_response(clone!(@weak _model => move |dialog, resp| {
                 if resp == gtk::ResponseType::Ok {
