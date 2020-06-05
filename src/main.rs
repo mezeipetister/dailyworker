@@ -94,7 +94,7 @@ fn build_edit_dialog(
 
     let force_alphanumeric = |e: &Entry| {
         e.connect_insert_text(|entry, text, _| {
-            if !text.parse::<u64>().is_ok() 
+            if !text.parse::<usize>().is_ok() 
             {
                 // entry.delete_text(*p-1, *p);
                 // entry.block_signal(???);
