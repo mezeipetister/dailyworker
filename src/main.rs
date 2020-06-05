@@ -8,21 +8,25 @@ extern crate nanoid;
 extern crate pango;
 extern crate pangocairo;
 extern crate storaget;
+extern crate simple_xml_serialize;
 
 pub mod id;
 pub mod model;
 pub mod worker;
+mod xml;
 
 use chrono::prelude::*;
 use gio::prelude::*;
 use gtk::prelude::*;
-use gtk::{AboutDialog, Application, ApplicationWindow, Builder, Button, Entry, Window};
+use gtk::{AboutDialog, Application, ApplicationWindow, Builder, Button, Entry, Window, FileChooserDialog};
 use storaget::*;
 
 use glib::clone;
 use std::cell::RefCell;
 use std::env::args;
 use std::rc::Rc;
+use std::fs::File;
+use std::io::prelude::*;
 
 pub use worker::*;
 
@@ -620,6 +624,44 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
     //     }
     //     Inhibit(false)
     // });
+
+    let btn_export: Button = builder
+        .get_object("btn_export")
+        .expect("Couldnt get export btn");
+
+    let data = db.data.clone();
+    btn_export.connect_clicked(clone!(@weak window_main as window => move |_| {
+        // entry.set_text("Clicked!");
+        let dialog = FileChooserDialog::new(Some("Válassz mappát"), Some(&window),
+                                            gtk::FileChooserAction::Open);
+        dialog.add_buttons(&[
+            ("Mentés", gtk::ResponseType::Ok),
+            ("Vissza", gtk::ResponseType::Cancel)
+        ]);
+
+        dialog.set_action(gtk::FileChooserAction::SelectFolder);
+
+        dialog.run();
+        let path = dialog.get_filenames();
+        dialog.destroy();
+
+        let workers = (*data).borrow();
+        let workers_selected = workers.get_workers_selected();
+        let file_path = std::path::Path::new(&path.first().expect("There is no path selected at export"))
+            .join(&format!("{}-{}-{} {} óra {} perc.xml",
+                Local::now().year(),
+                Local::now().month(),
+                Local::now().day(),
+                Local::now().hour(),
+                Local::now().minute())
+            );
+
+        let content = xml::render_xml(&workers_selected);
+        let mut file = File::create(file_path).expect("Could not create file to export");
+        file.write_all(content.as_bytes()).expect("Error while writing xml data to export file");
+
+        // println!("Files: {:?}", files);
+    }));
 
     window_main.show_all();
 }

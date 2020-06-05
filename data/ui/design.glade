@@ -744,7 +744,7 @@ kiválasztásához.</property>
           </packing>
         </child>
         <child>
-          <object class="GtkButton">
+          <object class="GtkButton" id="btn_export">
             <property name="label" translatable="yes">Export</property>
             <property name="visible">True</property>
             <property name="can_focus">True</property>
