@@ -52,7 +52,7 @@ fn build_edit_dialog(
     title: &str,
 ) -> (gtk::Dialog, EditEntries) {
     // Init builder
-    let builder = Builder::new_from_string(glade);
+    let builder = Builder::from_string(glade);
     // Build dialog from builder
     let dialog: gtk::Dialog = builder
         .get_object("dialog_edit")
@@ -124,7 +124,7 @@ fn build_edit_dialog(
 
     btn_cancel.connect_clicked(clone!(@weak dialog => move |_| {
         dialog.response(gtk::ResponseType::Cancel);
-        dialog.destroy();
+        dialog.close();
     }));
 
     // entry_birthdate
@@ -230,18 +230,18 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
         (*db.data).borrow().get_workers_selected(),
     ));
     // Build left treeview
-    let treeview_left = gtk::TreeView::new_with_model(&*model);
+    let treeview_left = gtk::TreeView::with_model(&*model);
     treeview_left.set_vexpand(true);
     treeview_left.set_search_column(model::Columns::Name as i32);
     model::add_columns_left(&model, &treeview_left);
     // Build right treeview
-    let treeview_right = gtk::TreeView::new_with_model(&*model_selected);
+    let treeview_right = gtk::TreeView::with_model(&*model_selected);
     treeview_right.set_vexpand(true);
     treeview_right.set_search_column(model::Columns::Name as i32);
     model::add_columns_right(&treeview_right);
 
     // Init builder from static str
-    let builder = Builder::new_from_string(glade);
+    let builder = Builder::from_string(glade);
     // Init Application Window
     let window_main: ApplicationWindow = builder
         .get_object("window_main")
@@ -256,7 +256,7 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
     // Build About dialog when Info button clicked
     btn_about.connect_clicked(
         move |button| {
-            let builder = Builder::new_from_string(glade);
+            let builder = Builder::from_string(glade);
             let dialog: AboutDialog = builder
                 .get_object("window_about")
                 .expect("Error loading about window");
@@ -328,13 +328,13 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
                     dialog.get_content_area().add(&label);
                     dialog.show_all();
                 };
-                let date = NaiveDate::parse_from_str(&entries.bdate.get_text().unwrap().to_string(), "%Y-%m-%d");
+                let date = NaiveDate::parse_from_str(&entries.bdate.get_text().to_string(), "%Y-%m-%d");
                 if date.is_err() {
                     alert("A dátum formátuma nem megfelelő!\npl.: 2020-01-01");
                     return;
                 }
 
-                let _zip = entries.zip.get_text().unwrap().to_string().parse::<u32>();
+                let _zip = entries.zip.get_text().to_string().parse::<u32>();
 
                 if _zip.is_err() {
                     alert("Az irányítószám csak számot tartalmazhat!");
@@ -345,33 +345,33 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
                 let id = (*data).borrow_mut()
                     .as_mut()
                     .add_new_worker(
-                        entries.name.get_text().unwrap().to_string(),
-                        entries.taj.get_text().unwrap().to_string(),
-                        entries.tax.get_text().unwrap().to_string(),
-                        entries.mname.get_text().unwrap().to_string(),
+                        entries.name.get_text().to_string(),
+                        entries.taj.get_text().to_string(),
+                        entries.tax.get_text().to_string(),
+                        entries.mname.get_text().to_string(),
                         date.unwrap(),
-                        entries.bplace.get_text().unwrap().to_string(),
+                        entries.bplace.get_text().to_string(),
                         _zip.unwrap(),
-                        entries.city.get_text().unwrap().to_string(),
-                        entries.street.get_text().unwrap().to_string());
+                        entries.city.get_text().to_string(),
+                        entries.street.get_text().to_string());
                 
                 let col_indices: [u32; 11] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
                 let values: [&dyn ToValue; 11] = [
                     &id.unwrap(),
-                    &entries.name.get_text().unwrap().to_string(),
-                    &entries.mname.get_text().unwrap().to_string(),
-                    &entries.bdate.get_text().unwrap().to_string(),
-                    &entries.bplace.get_text().unwrap().to_string(),
-                    &entries.zip.get_text().unwrap().to_string().parse::<u32>().expect("Error while casting ZIP from string to u32"),
-                    &entries.city.get_text().unwrap().to_string(),
-                    &entries.street.get_text().unwrap().to_string(),
+                    &entries.name.get_text().to_string(),
+                    &entries.mname.get_text().to_string(),
+                    &entries.bdate.get_text().to_string(),
+                    &entries.bplace.get_text().to_string(),
+                    &entries.zip.get_text().to_string().parse::<u32>().expect("Error while casting ZIP from string to u32"),
+                    &entries.city.get_text().to_string(),
+                    &entries.street.get_text().to_string(),
                     &false,
-                    &entries.tax.get_text().unwrap().to_string(),
-                    &entries.taj.get_text().unwrap().to_string(),
+                    &entries.tax.get_text().to_string(),
+                    &entries.taj.get_text().to_string(),
                 ];
                 model.set(&model.append(), &col_indices, &values);
             }
-            dialog.destroy();
+            dialog.close();
         }));
         // Display dialog
         dialog.show_all();
@@ -511,13 +511,13 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
                         dialog.get_content_area().add(&label);
                         dialog.show_all();
                     };
-                    let date = NaiveDate::parse_from_str(&entries.bdate.get_text().unwrap().to_string(), "%Y-%m-%d");
+                    let date = NaiveDate::parse_from_str(&entries.bdate.get_text().to_string(), "%Y-%m-%d");
                     if date.is_err() {
                         alert("A dátum formátuma nem megfelelő!\npl.: 2020-01-01");
                         return;
                     }
     
-                    let _zip = entries.zip.get_text().unwrap().to_string().parse::<u32>();
+                    let _zip = entries.zip.get_text().to_string().parse::<u32>();
     
                     if _zip.is_err() {
                         alert("Az irányítószám csak számot tartalmazhat!");
@@ -545,20 +545,20 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
                     let col_indices: [u32; 11] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
                     let values: [&dyn ToValue; 11] = [
                         &id,
-                        &entries.name.get_text().unwrap().to_string(),
-                        &entries.mname.get_text().unwrap().to_string(),
-                        &entries.bdate.get_text().unwrap().to_string(),
-                        &entries.bplace.get_text().unwrap().to_string(),
-                        &entries.zip.get_text().unwrap().to_string().parse::<u32>().expect("Error while casting ZIP from string to u32"),
-                        &entries.city.get_text().unwrap().to_string(),
-                        &entries.street.get_text().unwrap().to_string(),
+                        &entries.name.get_text().to_string(),
+                        &entries.mname.get_text().to_string(),
+                        &entries.bdate.get_text().to_string(),
+                        &entries.bplace.get_text().to_string(),
+                        &entries.zip.get_text().to_string().parse::<u32>().expect("Error while casting ZIP from string to u32"),
+                        &entries.city.get_text().to_string(),
+                        &entries.street.get_text().to_string(),
                         &false,
-                        &entries.tax.get_text().unwrap().to_string(),
-                        &entries.taj.get_text().unwrap().to_string(),
+                        &entries.tax.get_text().to_string(),
+                        &entries.taj.get_text().to_string(),
                     ];
                     _model.set(&iter, &col_indices, &values);
                 }
-                dialog.destroy();
+                dialog.close();
             }));
 
         dialog.show_all();
@@ -568,7 +568,7 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
         clone!(@weak window_main, @strong model as m2 => @default-return Inhibit(false), move |treeview, event| {
             // If del pressed
             if event.get_hardware_keycode() == 119 {
-                let dialog = gtk::Dialog::new_with_buttons(
+                let dialog = gtk::Dialog::with_buttons(
                     Some("Biztosan törlöd?"),
                     Some(&window_main),
                     gtk::DialogFlags::MODAL,
@@ -601,7 +601,7 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
                             }
                             model::update_model(&*model_selected, (*data).borrow().get_workers_selected());
                         }
-                        dialog.destroy();
+                        dialog.close();
                     }),
                 );
                 dialog.show_all();
@@ -645,7 +645,7 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
 
         dialog.run();
         let path = dialog.get_filenames();
-        dialog.destroy();
+        dialog.close();
 
         let workers = (*data).borrow();
         let workers_selected = workers.get_workers_selected();

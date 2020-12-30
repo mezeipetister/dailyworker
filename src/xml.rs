@@ -78,7 +78,7 @@ pub fn render_xml(workers: &Vec<&Worker>) -> String {
 
     let mut nyomtatvanyinformacio = XMLElement::new("nyomtatvanyinformacio");
     nyomtatvanyinformacio.add_elements(vec![
-        XMLElement::new("nyomtatvanyazonosito").text("20T1042E"),
+        XMLElement::new("nyomtatvanyazonosito").text("21T1042E"),
         XMLElement::new("nyomtatvanyverzio").text("1.0"),
         adozo,
         XMLElement::new("megjegyzes").text("Bejelentés"),
