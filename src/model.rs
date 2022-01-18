@@ -22,37 +22,35 @@ pub enum Columns {
 pub fn create_model(workers: Vec<&Worker>) -> gtk::ListStore {
     let col_types: [glib::Type; 11] = [
         glib::Type::U32,
-        glib::Type::String,
-        glib::Type::String,
-        glib::Type::String,
-        glib::Type::String,
+        glib::Type::STRING,
+        glib::Type::STRING,
+        glib::Type::STRING,
+        glib::Type::STRING,
         glib::Type::U32,
-        glib::Type::String,
-        glib::Type::String,
-        glib::Type::Bool,
-        glib::Type::String,
-        glib::Type::String,
+        glib::Type::STRING,
+        glib::Type::STRING,
+        glib::Type::BOOL,
+        glib::Type::STRING,
+        glib::Type::STRING,
     ];
 
     let store = gtk::ListStore::new(&col_types);
 
-    let col_indices: [u32; 11] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-
     for (d_idx, w) in workers.iter().enumerate() {
-        let values: [&dyn ToValue; 11] = [
-            &w.id,
-            &w.name,
-            &w.mothersname,
-            &w.birthdate.to_string(),
-            &w.birthplace,
-            &w.zip,
-            &w.city,
-            &w.street,
-            &w.is_selected,
-            &w.taxnumber,
-            &w.taj,
+        let values: [(u32, &dyn ToValue); 11] = [
+            (0, &w.id),
+            (1, &w.name),
+            (2, &w.mothersname),
+            (3, &w.birthdate.to_string()),
+            (4, &w.birthplace),
+            (5, &w.zip),
+            (6, &w.city),
+            (7, &w.street),
+            (8, &w.is_selected),
+            (9, &w.taxnumber),
+            (10, &w.taj),
         ];
-        store.set(&store.append(), &col_indices, &values);
+        store.set(&store.append(), &values);
     }
 
     store
@@ -61,38 +59,38 @@ pub fn create_model(workers: Vec<&Worker>) -> gtk::ListStore {
 pub fn update_model(store: &gtk::ListStore, workers: Vec<&Worker>) {
     let col_types: [glib::Type; 11] = [
         glib::Type::U32,
-        glib::Type::String,
-        glib::Type::String,
-        glib::Type::String,
-        glib::Type::String,
+        glib::Type::STRING,
+        glib::Type::STRING,
+        glib::Type::STRING,
+        glib::Type::STRING,
         glib::Type::U32,
-        glib::Type::String,
-        glib::Type::String,
-        glib::Type::Bool,
-        glib::Type::String,
-        glib::Type::String,
+        glib::Type::STRING,
+        glib::Type::STRING,
+        glib::Type::BOOL,
+        glib::Type::STRING,
+        glib::Type::STRING,
     ];
 
     // let store = gtk::ListStore::new(&col_types);
     store.clear();
 
-    let col_indices: [u32; 11] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    // let col_indices: [u32; 11] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
     for (d_idx, w) in workers.iter().enumerate() {
-        let values: [&dyn ToValue; 11] = [
-            &w.id,
-            &w.name,
-            &w.mothersname,
-            &w.birthdate.to_string(),
-            &w.birthplace,
-            &w.zip,
-            &w.city,
-            &w.street,
-            &w.is_selected,
-            &w.taxnumber,
-            &w.taj,
+        let values: [(u32, &dyn ToValue); 11] = [
+            (0, &w.id),
+            (1, &w.name),
+            (2, &w.mothersname),
+            (3, &w.birthdate.to_string()),
+            (4, &w.birthplace),
+            (5, &w.zip),
+            (6, &w.city),
+            (7, &w.street),
+            (8, &w.is_selected),
+            (9, &w.taxnumber),
+            (10, &w.taj),
         ];
-        store.set(&store.append(), &col_indices, &values);
+        store.set(&store.append(), &values);
     }
 }
 
@@ -101,10 +99,10 @@ fn fixed_toggled<W: IsA<gtk::CellRendererToggle>>(
     _w: &W,
     path: gtk::TreePath,
 ) {
-    let iter = model.get_iter(&path).unwrap();
+    let iter = model.iter(&path).unwrap();
     let mut fixed = model
-        .get_value(&iter, Columns::IsSelected as i32)
-        .get_some::<bool>()
+        .value(&iter, Columns::IsSelected as i32)
+        .get::<bool>()
         .unwrap_or_else(|err| {
             panic!(
                 "ListStore value for {:?} at path {}: {}",

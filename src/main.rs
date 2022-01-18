@@ -55,7 +55,7 @@ fn build_edit_dialog(
     let builder = Builder::from_string(glade);
     // Build dialog from builder
     let dialog: gtk::Dialog = builder
-        .get_object("dialog_edit")
+        .object("dialog_edit")
         .expect("Couldn't get dialog edit");
 
     dialog.set_default_response(gtk::ResponseType::Ok);
@@ -64,31 +64,31 @@ fn build_edit_dialog(
     // Detect entries
     let entries = EditEntries {
         name: builder
-            .get_object("entry_name")
+            .object("entry_name")
             .expect("Failed to load entry name"),
         taj: builder
-            .get_object("entry_taj")
+            .object("entry_taj")
             .expect("Failed to load entry taj"),
         tax: builder
-            .get_object("entry_tax")
+            .object("entry_tax")
             .expect("Failed to load entry tax"),
         mname: builder
-            .get_object("entry_mothersname")
+            .object("entry_mothersname")
             .expect("Failed to load entry mothersname"),
         bdate: builder
-            .get_object("entry_birthdate")
+            .object("entry_birthdate")
             .expect("Failed to load entry birthdate"),
         bplace: builder
-            .get_object("entry_birthplace")
+            .object("entry_birthplace")
             .expect("Failed to load entry birthplace"),
         zip: builder
-            .get_object("entry_zip")
+            .object("entry_zip")
             .expect("Failed to load entry zip"),
         city: builder
-            .get_object("entry_city")
+            .object("entry_city")
             .expect("Failed to load entry city"),
         street: builder
-            .get_object("entry_street")
+            .object("entry_street")
             .expect("Failed to load entry street"),
     };
 
@@ -111,7 +111,7 @@ fn build_edit_dialog(
     force_alphanumeric(&entries.zip);
 
     // Render save button
-    let btn_save: Button = builder.get_object("btn_save").expect("Cannot get btn save");
+    let btn_save: Button = builder.object("btn_save").expect("Cannot get btn save");
 
     // Set response OK when save button clicked
     btn_save
@@ -119,7 +119,7 @@ fn build_edit_dialog(
 
     // Render cancel button
     let btn_cancel: Button = builder
-        .get_object("btn_cancel")
+        .object("btn_cancel")
         .expect("Cannot get btn cancel");
 
     btn_cancel.connect_clicked(clone!(@weak dialog => move |_| {
@@ -244,13 +244,13 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
     let builder = Builder::from_string(glade);
     // Init Application Window
     let window_main: ApplicationWindow = builder
-        .get_object("window_main")
+        .object("window_main")
         .expect("Couldn't get window");
     // Attach main window to the application
     window_main.set_application(Some(application));
 
     let btn_about: Button = builder
-        .get_object("btn_info")
+        .object("btn_info")
         .expect("Couldnt get info btn");
 
     // Build About dialog when Info button clicked
@@ -258,10 +258,10 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
         move |button| {
             let builder = Builder::from_string(glade);
             let dialog: AboutDialog = builder
-                .get_object("window_about")
+                .object("window_about")
                 .expect("Error loading about window");
             if let Some(window) = button
-                .get_toplevel()
+                .toplevel()
                 .and_then(|w| w.downcast::<Window>().ok())
             {
                 dialog.set_transient_for(Some(&window));
@@ -276,12 +276,12 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
 
     // Build left panel
     let left_panel: gtk::Box = builder
-        .get_object("left_panel")
+        .object("left_panel")
         .expect("Cannot get main box");
 
     // Build right panel
     let right_panel: gtk::Box = builder
-        .get_object("right_panel")
+        .object("right_panel")
         .expect("Cannot get main box");
 
     // Create a scrolled window
@@ -308,7 +308,7 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
 
     // Build NEW button
     let btn_new: Button = builder
-        .get_object("btn_new")
+        .object("btn_new")
         .expect("Couldnt get new button");
 
     let data = db.data.clone();
@@ -325,16 +325,16 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
                     label.set_margin_bottom(19);
                     label.set_margin_start(19);
                     label.set_margin_end(19);
-                    dialog.get_content_area().add(&label);
+                    dialog.content_area().add(&label);
                     dialog.show_all();
                 };
-                let date = NaiveDate::parse_from_str(&entries.bdate.get_text().to_string(), "%Y-%m-%d");
+                let date = NaiveDate::parse_from_str(&entries.bdate.text().to_string(), "%Y-%m-%d");
                 if date.is_err() {
                     alert("A dátum formátuma nem megfelelő!\npl.: 2020-01-01");
                     return;
                 }
 
-                let _zip = entries.zip.get_text().to_string().parse::<u32>();
+                let _zip = entries.zip.text().to_string().parse::<u32>();
 
                 if _zip.is_err() {
                     alert("Az irányítószám csak számot tartalmazhat!");
@@ -345,31 +345,31 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
                 let id = (*data).borrow_mut()
                     .as_mut()
                     .add_new_worker(
-                        entries.name.get_text().to_string(),
-                        entries.taj.get_text().to_string(),
-                        entries.tax.get_text().to_string(),
-                        entries.mname.get_text().to_string(),
+                        entries.name.text().to_string(),
+                        entries.taj.text().to_string(),
+                        entries.tax.text().to_string(),
+                        entries.mname.text().to_string(),
                         date.unwrap(),
-                        entries.bplace.get_text().to_string(),
+                        entries.bplace.text().to_string(),
                         _zip.unwrap(),
-                        entries.city.get_text().to_string(),
-                        entries.street.get_text().to_string());
+                        entries.city.text().to_string(),
+                        entries.street.text().to_string());
                 
-                let col_indices: [u32; 11] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-                let values: [&dyn ToValue; 11] = [
-                    &id.unwrap(),
-                    &entries.name.get_text().to_string(),
-                    &entries.mname.get_text().to_string(),
-                    &entries.bdate.get_text().to_string(),
-                    &entries.bplace.get_text().to_string(),
-                    &entries.zip.get_text().to_string().parse::<u32>().expect("Error while casting ZIP from string to u32"),
-                    &entries.city.get_text().to_string(),
-                    &entries.street.get_text().to_string(),
-                    &false,
-                    &entries.tax.get_text().to_string(),
-                    &entries.taj.get_text().to_string(),
+                // let col_indices: [u32; 11] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+                let values: [(u32, &dyn ToValue); 11] = [
+                    (0, &id.unwrap()),
+                    (1, &entries.name.text().to_string()),
+                    (2, &entries.mname.text().to_string()),
+                    (3, &entries.bdate.text().to_string()),
+                    (4, &entries.bplace.text().to_string()),
+                    (5, &entries.zip.text().to_string().parse::<u32>().expect("Error while casting ZIP from string to u32")),
+                    (6, &entries.city.text().to_string()),
+                    (7, &entries.street.text().to_string()),
+                    (8, &false),
+                    (9, &entries.tax.text().to_string()),
+                    (10, &entries.taj.text().to_string()),
                 ];
-                model.set(&model.append(), &col_indices, &values);
+                model.set(&model.append(), &values);
             }
             dialog.close();
         }));
@@ -379,62 +379,52 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
 
     model.connect_row_changed(clone!(@weak data, @strong model_selected => move |s, path, iter| {
         let id = s
-            .get_value(iter, model::Columns::Id as i32)
-            .get_some::<u32>()
+            .value(iter, model::Columns::Id as i32)
+            .get::<u32>()
             .unwrap();
         let name = s
-            .get_value(iter, model::Columns::Name as i32)
+            .value(iter, model::Columns::Name as i32)
             .get::<String>()
-            .unwrap()
             .unwrap();
         let taj = s
-            .get_value(iter, model::Columns::TAJ as i32)
+            .value(iter, model::Columns::TAJ as i32)
             .get::<String>()
-            .unwrap()
             .unwrap();
         let tax = s
-            .get_value(iter, model::Columns::Tax as i32)
+            .value(iter, model::Columns::Tax as i32)
             .get::<String>()
-            .unwrap()
             .unwrap();
         let mname = s
-            .get_value(iter, model::Columns::Mname as i32)
+            .value(iter, model::Columns::Mname as i32)
             .get::<String>()
-            .unwrap()
             .unwrap();
         let name = s
-            .get_value(iter, model::Columns::Name as i32)
+            .value(iter, model::Columns::Name as i32)
             .get::<String>()
-            .unwrap()
             .unwrap();
         let bdate = s
-            .get_value(iter, model::Columns::Birthdate as i32)
+            .value(iter, model::Columns::Birthdate as i32)
             .get::<String>()
-            .unwrap()
             .unwrap();
         let bplace = s
-            .get_value(iter, model::Columns::Birthplace as i32)
+            .value(iter, model::Columns::Birthplace as i32)
             .get::<String>()
-            .unwrap()
             .unwrap();
         let zip = s
-            .get_value(iter, model::Columns::Zip as i32)
+            .value(iter, model::Columns::Zip as i32)
             .get::<u32>()
-            .unwrap()
             .unwrap();
         let city = s
-            .get_value(iter, model::Columns::City as i32)
+            .value(iter, model::Columns::City as i32)
             .get::<String>()
-            .unwrap()
             .unwrap();
         let street = s
-            .get_value(iter, model::Columns::Street as i32)
+            .value(iter, model::Columns::Street as i32)
             .get::<String>()
-            .unwrap()
             .unwrap();
         let is_selected = s
-            .get_value(&iter, model::Columns::IsSelected as i32)
-            .get_some::<bool>()
+            .value(&iter, model::Columns::IsSelected as i32)
+            .get::<bool>()
             .unwrap();
 
         let worker = Worker::new(id,
@@ -463,14 +453,14 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
     let data = db.data.clone();
     // Left douple click & enter action
     treeview_left.connect_row_activated(clone!(@weak application, @weak data, @weak treeview_left, @strong model as _model => move |a, b, _| {
-        let model = a.get_model().unwrap();
-        let iter = model.get_iter(b).unwrap();
+        let model = a.model().unwrap();
+        let iter = model.iter(b).unwrap();
 
         let (dialog, entries) = build_edit_dialog(&application, glade, "Munkavállaló szerkesztése");
         
         let id = model
-            .get_value(&iter, model::Columns::Id as i32)
-            .get_some::<u32>()
+            .value(&iter, model::Columns::Id as i32)
+            .get::<u32>()
             .unwrap();
 
         // let is_selected = model
@@ -479,23 +469,23 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
         //     .unwrap();
 
         entries.name.set_text(&model
-            .get_value(&iter, model::Columns::Name as i32).get::<String>().unwrap().unwrap());
+            .value(&iter, model::Columns::Name as i32).get::<String>().unwrap());
         entries.mname.set_text(&model
-            .get_value(&iter, model::Columns::Mname as i32).get::<String>().unwrap().unwrap());
+            .value(&iter, model::Columns::Mname as i32).get::<String>().unwrap());
         entries.taj.set_text(&model
-            .get_value(&iter, model::Columns::TAJ as i32).get::<String>().unwrap().unwrap());
+            .value(&iter, model::Columns::TAJ as i32).get::<String>().unwrap());
         entries.bplace.set_text(&model
-            .get_value(&iter, model::Columns::Birthplace as i32).get::<String>().unwrap().unwrap());
+            .value(&iter, model::Columns::Birthplace as i32).get::<String>().unwrap());
         entries.bdate.set_text(&model
-            .get_value(&iter, model::Columns::Birthdate as i32).get::<String>().unwrap().unwrap());
+            .value(&iter, model::Columns::Birthdate as i32).get::<String>().unwrap());
         entries.zip.set_text(&model
-            .get_value(&iter, model::Columns::Zip as i32).get::<u32>().unwrap().unwrap().to_string());
+            .value(&iter, model::Columns::Zip as i32).get::<u32>().unwrap().to_string());
         entries.city.set_text(&model
-            .get_value(&iter, model::Columns::City as i32).get::<String>().unwrap().unwrap().to_string());
+            .value(&iter, model::Columns::City as i32).get::<String>().unwrap().to_string());
         entries.street.set_text(&model
-            .get_value(&iter, model::Columns::Street as i32).get::<String>().unwrap().unwrap().to_string());
+            .value(&iter, model::Columns::Street as i32).get::<String>().unwrap().to_string());
         let tax = model
-        .get_value(&iter, model::Columns::Tax as i32).get::<String>().unwrap().unwrap().to_string();
+        .value(&iter, model::Columns::Tax as i32).get::<String>().unwrap().to_string();
         println!("Tax {}", &tax);
         entries.tax.set_text(&tax);
 
@@ -508,16 +498,16 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
                         label.set_margin_bottom(19);
                         label.set_margin_start(19);
                         label.set_margin_end(19);
-                        dialog.get_content_area().add(&label);
+                        dialog.content_area().add(&label);
                         dialog.show_all();
                     };
-                    let date = NaiveDate::parse_from_str(&entries.bdate.get_text().to_string(), "%Y-%m-%d");
+                    let date = NaiveDate::parse_from_str(&entries.bdate.text().to_string(), "%Y-%m-%d");
                     if date.is_err() {
                         alert("A dátum formátuma nem megfelelő!\npl.: 2020-01-01");
                         return;
                     }
     
-                    let _zip = entries.zip.get_text().to_string().parse::<u32>();
+                    let _zip = entries.zip.text().to_string().parse::<u32>();
     
                     if _zip.is_err() {
                         alert("Az irányítószám csak számot tartalmazhat!");
@@ -542,21 +532,21 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
                     //     .as_mut()
                     //     .update_worker_by_id(worker, id).expect("Error while updating worker Pack storage");
                     
-                    let col_indices: [u32; 11] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-                    let values: [&dyn ToValue; 11] = [
-                        &id,
-                        &entries.name.get_text().to_string(),
-                        &entries.mname.get_text().to_string(),
-                        &entries.bdate.get_text().to_string(),
-                        &entries.bplace.get_text().to_string(),
-                        &entries.zip.get_text().to_string().parse::<u32>().expect("Error while casting ZIP from string to u32"),
-                        &entries.city.get_text().to_string(),
-                        &entries.street.get_text().to_string(),
-                        &false,
-                        &entries.tax.get_text().to_string(),
-                        &entries.taj.get_text().to_string(),
+                    // let col_indices: [u32; 11] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+                    let values: [(u32, &dyn ToValue); 11] = [
+                        (0, &id),
+                        (1, &entries.name.text().to_string()),
+                        (2, &entries.mname.text().to_string()),
+                        (3, &entries.bdate.text().to_string()),
+                        (4, &entries.bplace.text().to_string()),
+                        (5, &entries.zip.text().to_string().parse::<u32>().expect("Error while casting ZIP from string to u32")),
+                        (6, &entries.city.text().to_string()),
+                        (7, &entries.street.text().to_string()),
+                        (8, &false),
+                        (9, &entries.tax.text().to_string()),
+                        (10, &entries.taj.text().to_string()),
                     ];
-                    _model.set(&iter, &col_indices, &values);
+                    _model.set(&iter, &values);
                 }
                 dialog.close();
             }));
@@ -567,7 +557,7 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
     treeview_left.connect_key_press_event(
         clone!(@weak window_main, @strong model as m2 => @default-return Inhibit(false), move |treeview, event| {
             // If del pressed
-            if event.get_hardware_keycode() == 119 {
+            if event.hardware_keycode() == 119 {
                 let dialog = gtk::Dialog::with_buttons(
                     Some("Biztosan törlöd?"),
                     Some(&window_main),
@@ -584,15 +574,15 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
                 label.set_margin_end(19);
                 label.set_margin_top(19);
                 label.set_margin_bottom(19);
-                dialog.get_content_area().add(&label);
+                dialog.content_area().add(&label);
 
                 dialog.connect_response(
                     clone!(@weak treeview, @weak data, @weak m2, @weak model_selected => move |dialog, resp| {
                         if resp == gtk::ResponseType::Ok {
-                            let (model, iter) = treeview.get_selection().get_selected().unwrap();
+                            let (model, iter) = treeview.selection().selected().unwrap();
                             let id = model
-                                .get_value(&iter, model::Columns::Id as i32)
-                                .get_some::<u32>()
+                                .value(&iter, model::Columns::Id as i32)
+                                .get::<u32>()
                                 .unwrap();
                             // Try to remove worker from Pack by ID
                             if let Some(_) = data.borrow_mut().as_mut().remove_worker_by_id(id) {
@@ -628,7 +618,7 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
     // });
 
     let btn_export: Button = builder
-        .get_object("btn_export")
+        .object("btn_export")
         .expect("Couldnt get export btn");
 
     let data = db.data.clone();
@@ -644,7 +634,7 @@ fn build_ui(application: &gtk::Application, glade: &'static str, db: &Db) {
         dialog.set_action(gtk::FileChooserAction::SelectFolder);
 
         dialog.run();
-        let path = dialog.get_filenames();
+        let path = dialog.filenames();
         dialog.close();
 
         let workers = (*data).borrow();
@@ -687,12 +677,11 @@ fn main() {
         )),
     };
 
-    let application = gtk::Application::new(Some("com.dailyworker"), Default::default())
-        .expect("Initialization failed...");
+    let application = gtk::Application::new(Some("com.dailyworker"), Default::default());
 
     let glade_src = include_str!("../data/ui/design.glade");
 
     application.connect_activate(move |app| build_ui(app, &glade_src, &db));
 
-    application.run(&args().collect::<Vec<_>>());
+    application.run();
 }
