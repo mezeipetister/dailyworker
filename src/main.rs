@@ -1,10 +1,15 @@
-use chrono::NaiveDate;
+use std::fs::File;
+use std::io::Write;
+
+use chrono::{Datelike, Local, NaiveDate, Timelike};
 use iced::widget::{button, checkbox, row, text};
 use iced::{Application, Command, Element, Length, Settings, Theme};
+use native_dialog::{FileDialog, MessageDialog, MessageType};
 use storaget::*;
 use worker::*;
 
 mod worker;
+mod xml;
 
 #[derive(Debug, Default, Clone)]
 pub enum View {
@@ -149,6 +154,34 @@ impl Application for AppData {
                 if let Some(data) = &mut self.data {
                     let _ = data.as_mut().update_worker(worker);
                     self.view = View::Main;
+                }
+                Command::none()
+            }
+            Message::Export => {
+                if let Some(data) = &self.data {
+                    let path = FileDialog::new()
+                        .set_location("~/")
+                        .add_filter("XML", &["xml"])
+                        .show_open_single_dir()
+                        .unwrap();
+
+                    if let Some(path) = path {
+                        let workers_selected = data.get_workers_selected();
+                        let file_path = path.join(&format!(
+                            "{}-{}-{} {} óra {} perc.xml",
+                            Local::now().year(),
+                            Local::now().month(),
+                            Local::now().day(),
+                            Local::now().hour(),
+                            Local::now().minute()
+                        ));
+
+                        let content = xml::render_xml(&workers_selected);
+                        let mut file =
+                            File::create(file_path).expect("Could not create file to export");
+                        file.write_all(content.as_bytes())
+                            .expect("Error while writing xml data to export file");
+                    }
                 }
                 Command::none()
             }

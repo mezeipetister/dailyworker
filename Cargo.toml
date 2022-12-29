@@ -11,3 +11,5 @@ dirs = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 chrono = { version = "0.4", features = ["serde"] }
+simple_xml_serialize = "*"
+native-dialog = "0.6.3"
