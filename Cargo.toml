@@ -1,27 +1,15 @@
 [package]
 name = "dailyworker"
 version = "0.1.0"
-authors = ["Peter <mezeipetister@gmail.com>"]
-edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+edition = "2021"
 
 [dependencies]
-glib-sys = "^0"
-gobject-sys = "^0"
-glib = "^0"
-gio = "^0"
-gdk = "^0"
-gtk = "^0"
-gdk-pixbuf = "^0"
-cairo-rs = "^0"
-pango = "^0"
-pangocairo = "^0"
-chrono = { version = "0.4", features = ["serde"] }
-storaget = "*"
-serde = { version = "1.0", features = ["derive"] }
-serde_derive = "1.0"
-serde_json = "1.0"
-nanoid = "*"
+iced = { version = "0.6", features = ["canvas", "tokio", "debug"]}
+time = { version = "0.3.5", features = ["local-offset"] }
+storaget = {git="https://github.com/mezeipetister/storaget"}
 dirs = "*"
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
+chrono = { version = "0.4", features = ["serde"] }
 simple_xml_serialize = "*"
+native-dialog = "0.6.3"
