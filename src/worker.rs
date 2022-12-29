@@ -17,7 +17,7 @@ pub struct Employer {
     pub taxnumber: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct Worker {
     pub id: u32,
     pub name: String,
@@ -63,34 +63,23 @@ impl Worker {
 }
 
 impl Data {
-    pub fn add_new_worker(
-        &mut self,
-        name: String,
-        taj: String,
-        taxnumber: String,
-        mothersname: String,
-        birthdate: NaiveDate,
-        birthplace: String,
-        zip: u32,
-        city: String,
-        street: String,
-    ) -> Result<u32, String> {
+    pub fn add_new_worker(&mut self, worker: Worker) -> Result<u32, String> {
         self.worker_counter += 1;
         let new_worker = Worker {
             id: self.worker_counter,
-            name,
-            taj,
-            taxnumber,
-            mothersname,
-            birthdate,
-            birthplace,
-            zip,
-            city,
-            street,
-            is_selected: false,
+            ..worker
         };
         self.workers.push(new_worker);
         Ok(self.worker_counter)
+    }
+    pub fn update_worker(&mut self, new_worker: Worker) -> Result<&Worker, String> {
+        for worker in &mut self.workers {
+            if worker.id == new_worker.id {
+                *worker = new_worker;
+                return Ok(worker);
+            }
+        }
+        Err(format!("Worker not found by ID"))
     }
     pub fn update_worker_by_id(&mut self, new_worker: Worker, id: u32) -> Result<&Worker, String> {
         for worker in &mut self.workers {
