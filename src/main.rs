@@ -18,6 +18,7 @@ pub enum View {
     Main,
     NewEmployee,
     EditEmployee(Option<Worker>),
+    Modal(String),
 }
 
 #[derive(Debug, Default)]
@@ -83,6 +84,7 @@ impl Application for AppData {
                     }
                     View::NewEmployee => self.worker_selected = Some(Worker::default()),
                     View::EditEmployee(worker) => self.worker_selected = worker.clone(),
+                    _ => (),
                 }
                 Command::none()
             }
@@ -125,7 +127,7 @@ impl Application for AppData {
             Message::SetWorkerZip(value) => {
                 if let Some(worker) = &mut self.worker_selected {
                     if let Ok(zip) = value.parse::<u32>() {
-                        worker.zip = zip;
+                        worker.zip = zip.to_string();
                     }
                 }
                 Command::none()
@@ -203,6 +205,7 @@ impl Application for AppData {
             View::Main => view::main_view(self),
             View::NewEmployee => view::new_employee_view(self),
             View::EditEmployee(worker) => view::edit_employee_view(self),
+            View::Modal(msg) => view::modal_view(self),
             _ => unimplemented!(),
         }
     }
@@ -210,6 +213,7 @@ impl Application for AppData {
 
 mod view {
     use crate::{AppData, Message, View};
+    use iced::widget::text::Appearance;
     use iced::widget::{
         button, column, container, row, scrollable, text, text_input, vertical_space, Column, Row,
         Rule, Text,
@@ -305,19 +309,21 @@ mod view {
 
     pub fn new_employee_view(d: &AppData) -> Element<'_, Message> {
         if let Some(worker) = &d.worker_selected {
-            let mut w = window("Új munkavállaló").push(
-                row(vec![
-                    button(text("Vissza"))
-                        .padding(10)
-                        .on_press(Message::ChangeView(View::Main))
-                        .into(),
+            let mut buttons = vec![button(text("Vissza"))
+                .padding(10)
+                .on_press(Message::ChangeView(View::Main))
+                .into()];
+            if worker.has_valid_birthdate() {
+                buttons.push(
                     button("Létrehozás")
                         .padding(10)
                         .on_press(Message::CreateWorker(worker.clone()))
                         .into(),
-                ])
-                .spacing(20),
-            );
+                )
+            } else {
+                buttons.push(text("Érvénytelen születési dátum!").into());
+            }
+            let mut w = window("Új munkavállaló").push(row(buttons).spacing(20));
 
             let w = w
                 .push(row![
@@ -398,19 +404,21 @@ mod view {
 
     pub fn edit_employee_view(d: &AppData) -> Element<'_, Message> {
         if let Some(worker) = &d.worker_selected {
-            let mut w = window("Munkavállaló szerkesztése").push(
-                row(vec![
-                    button(text("Vissza"))
-                        .padding(10)
-                        .on_press(Message::ChangeView(View::Main))
-                        .into(),
+            let mut buttons = vec![button(text("Vissza"))
+                .padding(10)
+                .on_press(Message::ChangeView(View::Main))
+                .into()];
+            if worker.has_valid_birthdate() {
+                buttons.push(
                     button("Mentés")
                         .padding(10)
                         .on_press(Message::UpdateWorker(worker.clone()))
                         .into(),
-                ])
-                .spacing(20),
-            );
+                )
+            } else {
+                buttons.push(text("Érvénytelen születési dátum!").into());
+            }
+            let mut w = window("Munkavállaló szerkesztése").push(row(buttons).spacing(20));
 
             let w = w
                 .push(row![
@@ -488,6 +496,19 @@ mod view {
             unimplemented!()
         }
     }
+    pub fn modal_view(d: &AppData) -> Element<'_, Message> {
+        let window = Column::new();
+        if let View::Modal(msg) = &d.view {
+            let window = window.push(
+                text(msg)
+                    .size(40)
+                    .vertical_alignment(iced::alignment::Vertical::Center)
+                    .horizontal_alignment(iced::alignment::Horizontal::Center),
+            );
+            return window.into();
+        }
+        window.into()
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -529,7 +550,7 @@ impl Worker {
 
         row![
             checkbox,
-            text(&self.name).width(Length::Units(50)),
+            text(&self.name).width(Length::Units(100)),
             text(&self.taj).width(Length::Units(50)),
             text(&self.birthdate).width(Length::Shrink),
             text(format!("{} {} {}", &self.zip, &self.city, &self.street))
