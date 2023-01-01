@@ -5,9 +5,10 @@ use chrono::{Datelike, Local, NaiveDate, Timelike};
 use iced::widget::{button, checkbox, row, text};
 use iced::{Application, Command, Element, Length, Settings, Theme};
 use native_dialog::{FileDialog, MessageDialog, MessageType};
-use storaget::*;
+use uuid::Uuid;
 use worker::*;
 
+mod import;
 mod worker;
 mod xml;
 
@@ -22,7 +23,7 @@ pub enum View {
 #[derive(Debug, Default)]
 pub struct AppData {
     name_filter: String,
-    data: Option<Pack<worker::Data>>,
+    data: Option<worker::Data>,
     view: View,
     worker_selected: Option<Worker>,
 }
@@ -56,13 +57,13 @@ impl Application for AppData {
             }
             Message::RowAction(id, row_action) => {
                 if let Some(data) = &mut self.data {
-                    if let Some(worker) = data.as_mut().get_worker_mut_by_id(id) {
-                        match row_action {
-                            RowAction::Selected(value) => worker.is_selected = value,
-                            RowAction::Edit(worker) => {
-                                self.view = View::EditEmployee(Some(worker.clone()));
-                                self.worker_selected = Some(worker);
-                            }
+                    match row_action {
+                        RowAction::Selected(value) => {
+                            data.set_worker_selected_by_id(id, value);
+                        }
+                        RowAction::Edit(worker) => {
+                            self.view = View::EditEmployee(Some(worker.clone()));
+                            self.worker_selected = Some(worker);
                         }
                     }
                 }
@@ -111,9 +112,7 @@ impl Application for AppData {
             }
             Message::SetWorkerBirthdate(value) => {
                 if let Some(worker) = &mut self.worker_selected {
-                    if let Ok(date) = NaiveDate::parse_from_str(&value, "%Y-%m-%d") {
-                        worker.birthdate = date;
-                    }
+                    worker.birthdate = value;
                 }
                 Command::none()
             }
@@ -145,14 +144,14 @@ impl Application for AppData {
             }
             Message::CreateWorker(worker) => {
                 if let Some(data) = &mut self.data {
-                    let _ = data.as_mut().add_new_worker(worker);
+                    let _ = data.add_new_worker(worker);
                     self.view = View::Main;
                 }
                 Command::none()
             }
             Message::UpdateWorker(worker) => {
                 if let Some(data) = &mut self.data {
-                    let _ = data.as_mut().update_worker(worker);
+                    let _ = data.update_worker(worker);
                     self.view = View::Main;
                 }
                 Command::none()
@@ -237,7 +236,7 @@ mod view {
 
         let table = match &d.data {
             Some(data) => column(
-                data.workers
+                data.get_workers()
                     .iter()
                     .filter(|i| i.name.to_lowercase().contains(&d.name_filter))
                     .enumerate()
@@ -339,6 +338,56 @@ mod view {
                         Message::SetWorkerTaxnumber
                     )
                     .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Anyja neve").width(Length::Units(100)),
+                    text_input(
+                        "Anyja neve",
+                        worker.mothersname.as_ref(),
+                        Message::SetWorkerMothersname
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Születési dátum").width(Length::Units(100)),
+                    text_input(
+                        "Születési dátum",
+                        &worker.birthdate.to_string(),
+                        Message::SetWorkerBirthdate
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Születési helye").width(Length::Units(100)),
+                    text_input(
+                        "Születési helye",
+                        worker.birthplace.as_ref(),
+                        Message::SetWorkerBirthplace
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Irányítószám").width(Length::Units(100)),
+                    text_input(
+                        "Irányítószám",
+                        worker.zip.to_string().as_str(),
+                        Message::SetWorkerZip
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Település").width(Length::Units(100)),
+                    text_input("Település", worker.city.as_ref(), Message::SetWorkerCity)
+                        .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Utca, házszám").width(Length::Units(100)),
+                    text_input(
+                        "Utca, házszám",
+                        worker.street.as_ref(),
+                        Message::SetWorkerStreet
+                    )
+                    .width(Length::Units(200))
                 ]);
 
             w.into()
@@ -382,6 +431,56 @@ mod view {
                         Message::SetWorkerTaxnumber
                     )
                     .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Anyja neve").width(Length::Units(100)),
+                    text_input(
+                        "Anyja neve",
+                        worker.mothersname.as_ref(),
+                        Message::SetWorkerMothersname
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Születési dátum").width(Length::Units(100)),
+                    text_input(
+                        "Születési dátum",
+                        &worker.birthdate.to_string(),
+                        Message::SetWorkerBirthdate
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Születési helye").width(Length::Units(100)),
+                    text_input(
+                        "Születési helye",
+                        worker.birthplace.as_ref(),
+                        Message::SetWorkerBirthplace
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Irányítószám").width(Length::Units(100)),
+                    text_input(
+                        "Irányítószám",
+                        worker.zip.to_string().as_str(),
+                        Message::SetWorkerZip
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Település").width(Length::Units(100)),
+                    text_input("Település", worker.city.as_ref(), Message::SetWorkerCity)
+                        .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Utca, házszám").width(Length::Units(100)),
+                    text_input(
+                        "Utca, házszám",
+                        worker.street.as_ref(),
+                        Message::SetWorkerStreet
+                    )
+                    .width(Length::Units(200))
                 ]);
 
             w.into()
@@ -394,9 +493,9 @@ mod view {
 #[derive(Debug, Clone)]
 pub enum Message {
     DataLoading,
-    DataLoaded(Result<Pack<Data>, String>),
+    DataLoaded(Result<Data, String>),
     NameFilterChange(String),
-    RowAction(u32, RowAction),
+    RowAction(Uuid, RowAction),
     CreateWorker(Worker),
     UpdateWorker(Worker),
     SetWorkerName(String),
@@ -412,14 +511,9 @@ pub enum Message {
     Export,
 }
 
-async fn load_data() -> Result<Pack<Data>, String> {
-    let data = Pack::try_load_or_init(
-        dirs::home_dir()
-            .expect("Error while getting your home folder")
-            .join(".dailyworkerdb"),
-        "workersdb",
-    )
-    .map_err(|_| String::from("Error loading database"))?;
+async fn load_data() -> Result<Data, String> {
+    let ctx = Context::new()?;
+    let data = Data::init(ctx)?;
     Ok(data)
 }
 
