@@ -2,8 +2,11 @@ use std::fs::File;
 use std::io::Write;
 
 use chrono::{Datelike, Local, NaiveDate, Timelike};
-use iced::widget::{button, checkbox, row, text};
-use iced::{Application, Command, Element, Length, Settings, Theme};
+use iced::widget::{self, button, checkbox, row, text};
+use iced::{
+    event, keyboard, subscription, Application, Command, Element, Event, Length, Settings,
+    Subscription, Theme,
+};
 use native_dialog::{FileDialog, MessageDialog, MessageType};
 use uuid::Uuid;
 use worker::*;
@@ -186,6 +189,13 @@ impl Application for AppData {
                 }
                 Command::none()
             }
+            Message::TabPressed { shift } => {
+                if shift {
+                    widget::focus_previous()
+                } else {
+                    widget::focus_next()
+                }
+            }
             _ => unimplemented!(),
         }
     }
@@ -208,6 +218,22 @@ impl Application for AppData {
             View::Modal(msg) => view::modal_view(self),
             _ => unimplemented!(),
         }
+    }
+
+    fn subscription(&self) -> Subscription<Message> {
+        subscription::events_with(|event, status| match (event, status) {
+            (
+                Event::Keyboard(keyboard::Event::KeyPressed {
+                    key_code: keyboard::KeyCode::Tab,
+                    modifiers,
+                    ..
+                }),
+                event::Status::Ignored,
+            ) => Some(Message::TabPressed {
+                shift: modifiers.shift(),
+            }),
+            _ => None,
+        })
     }
 }
 
@@ -530,6 +556,7 @@ pub enum Message {
     SetWorkerStreet(String),
     ChangeView(View),
     Export,
+    TabPressed { shift: bool },
 }
 
 async fn load_data() -> Result<Data, String> {
