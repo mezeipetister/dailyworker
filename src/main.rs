@@ -11,7 +11,7 @@ use native_dialog::{FileDialog, MessageDialog, MessageType};
 use uuid::Uuid;
 use worker::*;
 
-mod import;
+// mod import;
 mod worker;
 mod xml;
 
@@ -304,8 +304,16 @@ mod view {
                 .into(),
             match selected.len() > 0 {
                 true => {
-                    let a: Vec<Element<'_, Message, Renderer>> =
-                        selected.iter().map(|i| text(&i.name).into()).collect();
+                    let a: Vec<Element<'_, Message, Renderer>> = selected
+                        .iter()
+                        .map(|i| {
+                            text(&format!(
+                                "{} ({} {}, {}) - {}",
+                                &i.name, &i.zip, &i.city, &i.street, &i.taj
+                            ))
+                            .into()
+                        })
+                        .collect();
                     column(a).into()
                 }
                 false => container(
