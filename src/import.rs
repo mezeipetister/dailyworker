@@ -5,7 +5,7 @@ mod old {
     pub struct Data {
         pub employers: Vec<Employer>,
         pub employer_counter: u32,
-        pub worker_counter: u32,w
+        pub worker_counter: u32,
         pub workers: Vec<Worker>,
     }
 
