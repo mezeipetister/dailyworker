@@ -267,7 +267,7 @@ mod view {
         let table = match &d.data {
             Some(data) => column(
                 data.get_workers()
-                    .iter()
+                    .into_iter()
                     .filter(|i| i.name.to_lowercase().contains(&d.name_filter))
                     .enumerate()
                     .map(|(i, item)| {
@@ -305,12 +305,13 @@ mod view {
             match selected.len() > 0 {
                 true => {
                     let a: Vec<Element<'_, Message, Renderer>> = selected
-                        .iter()
-                        .map(|i| {
-                            text(&format!(
-                                "{} ({} {}, {}) - {}",
-                                &i.name, &i.zip, &i.city, &i.street, &i.taj
-                            ))
+                        .into_iter()
+                        .map(move |item| {
+                            column![
+                                item.view_checkbox()
+                                    .map(move |row_action| Message::RowAction(item.id, row_action)),
+                                vertical_space(Length::Units(20))
+                            ]
                             .into()
                         })
                         .collect();
@@ -591,6 +592,19 @@ impl Worker {
             text(format!("{} {} {}", &self.zip, &self.city, &self.street))
                 .width(Length::Units(100)),
             button(text("Szerk.")).on_press(RowAction::Edit(self.clone())),
+        ]
+        .spacing(20)
+        .into()
+    }
+
+    fn view_checkbox(&self) -> Element<RowAction> {
+        let checkbox = checkbox("", self.is_selected, RowAction::Selected).width(Length::Shrink);
+        row![
+            checkbox,
+            text(&format!(
+                "{} ({} {}, {}) - {}",
+                &self.name, &self.zip, &self.city, &self.street, &self.taj
+            ))
         ]
         .spacing(20)
         .into()
