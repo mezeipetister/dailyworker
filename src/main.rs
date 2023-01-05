@@ -2,12 +2,16 @@ use std::fs::File;
 use std::io::Write;
 
 use chrono::{Datelike, Local, NaiveDate, Timelike};
-use iced::widget::{button, checkbox, row, text};
-use iced::{Application, Command, Element, Length, Settings, Theme};
+use iced::widget::{self, button, checkbox, row, text};
+use iced::{
+    event, keyboard, subscription, Application, Command, Element, Event, Length, Settings,
+    Subscription, Theme,
+};
 use native_dialog::{FileDialog, MessageDialog, MessageType};
-use storaget::*;
+use uuid::Uuid;
 use worker::*;
 
+// mod import;
 mod worker;
 mod xml;
 
@@ -17,12 +21,13 @@ pub enum View {
     Main,
     NewEmployee,
     EditEmployee(Option<Worker>),
+    Modal(String),
 }
 
 #[derive(Debug, Default)]
 pub struct AppData {
     name_filter: String,
-    data: Option<Pack<worker::Data>>,
+    data: Option<worker::Data>,
     view: View,
     worker_selected: Option<Worker>,
 }
@@ -56,13 +61,13 @@ impl Application for AppData {
             }
             Message::RowAction(id, row_action) => {
                 if let Some(data) = &mut self.data {
-                    if let Some(worker) = data.as_mut().get_worker_mut_by_id(id) {
-                        match row_action {
-                            RowAction::Selected(value) => worker.is_selected = value,
-                            RowAction::Edit(worker) => {
-                                self.view = View::EditEmployee(Some(worker.clone()));
-                                self.worker_selected = Some(worker);
-                            }
+                    match row_action {
+                        RowAction::Selected(value) => {
+                            data.set_worker_selected_by_id(id, value);
+                        }
+                        RowAction::Edit(worker) => {
+                            self.view = View::EditEmployee(Some(worker.clone()));
+                            self.worker_selected = Some(worker);
                         }
                     }
                 }
@@ -82,6 +87,7 @@ impl Application for AppData {
                     }
                     View::NewEmployee => self.worker_selected = Some(Worker::default()),
                     View::EditEmployee(worker) => self.worker_selected = worker.clone(),
+                    _ => (),
                 }
                 Command::none()
             }
@@ -111,9 +117,7 @@ impl Application for AppData {
             }
             Message::SetWorkerBirthdate(value) => {
                 if let Some(worker) = &mut self.worker_selected {
-                    if let Ok(date) = NaiveDate::parse_from_str(&value, "%Y-%m-%d") {
-                        worker.birthdate = date;
-                    }
+                    worker.birthdate = value;
                 }
                 Command::none()
             }
@@ -126,7 +130,7 @@ impl Application for AppData {
             Message::SetWorkerZip(value) => {
                 if let Some(worker) = &mut self.worker_selected {
                     if let Ok(zip) = value.parse::<u32>() {
-                        worker.zip = zip;
+                        worker.zip = zip.to_string();
                     }
                 }
                 Command::none()
@@ -145,14 +149,14 @@ impl Application for AppData {
             }
             Message::CreateWorker(worker) => {
                 if let Some(data) = &mut self.data {
-                    let _ = data.as_mut().add_new_worker(worker);
+                    let _ = data.add_new_worker(worker);
                     self.view = View::Main;
                 }
                 Command::none()
             }
             Message::UpdateWorker(worker) => {
                 if let Some(data) = &mut self.data {
-                    let _ = data.as_mut().update_worker(worker);
+                    let _ = data.update_worker(worker);
                     self.view = View::Main;
                 }
                 Command::none()
@@ -185,6 +189,13 @@ impl Application for AppData {
                 }
                 Command::none()
             }
+            Message::TabPressed { shift } => {
+                if shift {
+                    widget::focus_previous()
+                } else {
+                    widget::focus_next()
+                }
+            }
             _ => unimplemented!(),
         }
     }
@@ -204,13 +215,31 @@ impl Application for AppData {
             View::Main => view::main_view(self),
             View::NewEmployee => view::new_employee_view(self),
             View::EditEmployee(worker) => view::edit_employee_view(self),
+            View::Modal(msg) => view::modal_view(self),
             _ => unimplemented!(),
         }
+    }
+
+    fn subscription(&self) -> Subscription<Message> {
+        subscription::events_with(|event, status| match (event, status) {
+            (
+                Event::Keyboard(keyboard::Event::KeyPressed {
+                    key_code: keyboard::KeyCode::Tab,
+                    modifiers,
+                    ..
+                }),
+                event::Status::Ignored,
+            ) => Some(Message::TabPressed {
+                shift: modifiers.shift(),
+            }),
+            _ => None,
+        })
     }
 }
 
 mod view {
     use crate::{AppData, Message, View};
+    use iced::widget::text::Appearance;
     use iced::widget::{
         button, column, container, row, scrollable, text, text_input, vertical_space, Column, Row,
         Rule, Text,
@@ -237,8 +266,8 @@ mod view {
 
         let table = match &d.data {
             Some(data) => column(
-                data.workers
-                    .iter()
+                data.get_workers()
+                    .into_iter()
                     .filter(|i| i.name.to_lowercase().contains(&d.name_filter))
                     .enumerate()
                     .map(|(i, item)| {
@@ -275,8 +304,17 @@ mod view {
                 .into(),
             match selected.len() > 0 {
                 true => {
-                    let a: Vec<Element<'_, Message, Renderer>> =
-                        selected.iter().map(|i| text(&i.name).into()).collect();
+                    let a: Vec<Element<'_, Message, Renderer>> = selected
+                        .into_iter()
+                        .map(move |item| {
+                            column![
+                                item.view_checkbox()
+                                    .map(move |row_action| Message::RowAction(item.id, row_action)),
+                                vertical_space(Length::Units(20))
+                            ]
+                            .into()
+                        })
+                        .collect();
                     column(a).into()
                 }
                 false => container(
@@ -306,19 +344,21 @@ mod view {
 
     pub fn new_employee_view(d: &AppData) -> Element<'_, Message> {
         if let Some(worker) = &d.worker_selected {
-            let mut w = window("Új munkavállaló").push(
-                row(vec![
-                    button(text("Vissza"))
-                        .padding(10)
-                        .on_press(Message::ChangeView(View::Main))
-                        .into(),
+            let mut buttons = vec![button(text("Vissza"))
+                .padding(10)
+                .on_press(Message::ChangeView(View::Main))
+                .into()];
+            if worker.has_valid_birthdate() {
+                buttons.push(
                     button("Létrehozás")
                         .padding(10)
                         .on_press(Message::CreateWorker(worker.clone()))
                         .into(),
-                ])
-                .spacing(20),
-            );
+                )
+            } else {
+                buttons.push(text("Érvénytelen születési dátum!").into());
+            }
+            let mut w = window("Új munkavállaló").push(row(buttons).spacing(20));
 
             let w = w
                 .push(row![
@@ -337,6 +377,56 @@ mod view {
                         "Adószám",
                         worker.taxnumber.as_ref(),
                         Message::SetWorkerTaxnumber
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Anyja neve").width(Length::Units(100)),
+                    text_input(
+                        "Anyja neve",
+                        worker.mothersname.as_ref(),
+                        Message::SetWorkerMothersname
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Születési dátum").width(Length::Units(100)),
+                    text_input(
+                        "Születési dátum",
+                        &worker.birthdate.to_string(),
+                        Message::SetWorkerBirthdate
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Születési helye").width(Length::Units(100)),
+                    text_input(
+                        "Születési helye",
+                        worker.birthplace.as_ref(),
+                        Message::SetWorkerBirthplace
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Irányítószám").width(Length::Units(100)),
+                    text_input(
+                        "Irányítószám",
+                        worker.zip.to_string().as_str(),
+                        Message::SetWorkerZip
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Település").width(Length::Units(100)),
+                    text_input("Település", worker.city.as_ref(), Message::SetWorkerCity)
+                        .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Utca, házszám").width(Length::Units(100)),
+                    text_input(
+                        "Utca, házszám",
+                        worker.street.as_ref(),
+                        Message::SetWorkerStreet
                     )
                     .width(Length::Units(200))
                 ]);
@@ -349,19 +439,21 @@ mod view {
 
     pub fn edit_employee_view(d: &AppData) -> Element<'_, Message> {
         if let Some(worker) = &d.worker_selected {
-            let mut w = window("Munkavállaló szerkesztése").push(
-                row(vec![
-                    button(text("Vissza"))
-                        .padding(10)
-                        .on_press(Message::ChangeView(View::Main))
-                        .into(),
+            let mut buttons = vec![button(text("Vissza"))
+                .padding(10)
+                .on_press(Message::ChangeView(View::Main))
+                .into()];
+            if worker.has_valid_birthdate() {
+                buttons.push(
                     button("Mentés")
                         .padding(10)
                         .on_press(Message::UpdateWorker(worker.clone()))
                         .into(),
-                ])
-                .spacing(20),
-            );
+                )
+            } else {
+                buttons.push(text("Érvénytelen születési dátum!").into());
+            }
+            let mut w = window("Munkavállaló szerkesztése").push(row(buttons).spacing(20));
 
             let w = w
                 .push(row![
@@ -382,6 +474,56 @@ mod view {
                         Message::SetWorkerTaxnumber
                     )
                     .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Anyja neve").width(Length::Units(100)),
+                    text_input(
+                        "Anyja neve",
+                        worker.mothersname.as_ref(),
+                        Message::SetWorkerMothersname
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Születési dátum").width(Length::Units(100)),
+                    text_input(
+                        "Születési dátum",
+                        &worker.birthdate.to_string(),
+                        Message::SetWorkerBirthdate
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Születési helye").width(Length::Units(100)),
+                    text_input(
+                        "Születési helye",
+                        worker.birthplace.as_ref(),
+                        Message::SetWorkerBirthplace
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Irányítószám").width(Length::Units(100)),
+                    text_input(
+                        "Irányítószám",
+                        worker.zip.to_string().as_str(),
+                        Message::SetWorkerZip
+                    )
+                    .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Település").width(Length::Units(100)),
+                    text_input("Település", worker.city.as_ref(), Message::SetWorkerCity)
+                        .width(Length::Units(200))
+                ])
+                .push(row![
+                    text("Utca, házszám").width(Length::Units(100)),
+                    text_input(
+                        "Utca, házszám",
+                        worker.street.as_ref(),
+                        Message::SetWorkerStreet
+                    )
+                    .width(Length::Units(200))
                 ]);
 
             w.into()
@@ -389,14 +531,27 @@ mod view {
             unimplemented!()
         }
     }
+    pub fn modal_view(d: &AppData) -> Element<'_, Message> {
+        let window = Column::new();
+        if let View::Modal(msg) = &d.view {
+            let window = window.push(
+                text(msg)
+                    .size(40)
+                    .vertical_alignment(iced::alignment::Vertical::Center)
+                    .horizontal_alignment(iced::alignment::Horizontal::Center),
+            );
+            return window.into();
+        }
+        window.into()
+    }
 }
 
 #[derive(Debug, Clone)]
 pub enum Message {
     DataLoading,
-    DataLoaded(Result<Pack<Data>, String>),
+    DataLoaded(Result<Data, String>),
     NameFilterChange(String),
-    RowAction(u32, RowAction),
+    RowAction(Uuid, RowAction),
     CreateWorker(Worker),
     UpdateWorker(Worker),
     SetWorkerName(String),
@@ -410,16 +565,12 @@ pub enum Message {
     SetWorkerStreet(String),
     ChangeView(View),
     Export,
+    TabPressed { shift: bool },
 }
 
-async fn load_data() -> Result<Pack<Data>, String> {
-    let data = Pack::try_load_or_init(
-        dirs::home_dir()
-            .expect("Error while getting your home folder")
-            .join(".dailyworkerdb"),
-        "workersdb",
-    )
-    .map_err(|_| String::from("Error loading database"))?;
+async fn load_data() -> Result<Data, String> {
+    let ctx = Context::new()?;
+    let data = Data::init(ctx)?;
     Ok(data)
 }
 
@@ -435,12 +586,25 @@ impl Worker {
 
         row![
             checkbox,
-            text(&self.name).width(Length::Units(50)),
+            text(&self.name).width(Length::Units(100)),
             text(&self.taj).width(Length::Units(50)),
             text(&self.birthdate).width(Length::Shrink),
             text(format!("{} {} {}", &self.zip, &self.city, &self.street))
                 .width(Length::Units(100)),
             button(text("Szerk.")).on_press(RowAction::Edit(self.clone())),
+        ]
+        .spacing(20)
+        .into()
+    }
+
+    fn view_checkbox(&self) -> Element<RowAction> {
+        let checkbox = checkbox("", self.is_selected, RowAction::Selected).width(Length::Shrink);
+        row![
+            checkbox,
+            text(&format!(
+                "{} ({} {}, {}) - {}",
+                &self.name, &self.zip, &self.city, &self.street, &self.taj
+            ))
         ]
         .spacing(20)
         .into()

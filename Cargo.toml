@@ -1,15 +1,15 @@
 [package]
 name = "dailyworker"
-version = "0.1.0"
+version = "0.9.1"
 edition = "2021"
 
 [dependencies]
 iced = { version = "0.6", features = ["canvas", "tokio", "debug"]}
 time = { version = "0.3.5", features = ["local-offset"] }
-storaget = {git="https://github.com/mezeipetister/storaget"}
 dirs = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 chrono = { version = "0.4", features = ["serde"] }
 simple_xml_serialize = "*"
 native-dialog = "0.6.3"
+uuid = {version="*", features=["v4", "serde"]}
