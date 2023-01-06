@@ -2,16 +2,17 @@ use std::fs::File;
 use std::io::Write;
 
 use chrono::{Datelike, Local, NaiveDate, Timelike};
-use iced::widget::{self, button, checkbox, row, text};
+use iced::widget::{self, button, checkbox, row, text, Text};
 use iced::{
-    event, keyboard, subscription, Application, Command, Element, Event, Length, Settings,
-    Subscription, Theme,
+    alignment, event, keyboard, subscription, Application, Command, Element, Event, Font, Length,
+    Settings, Subscription, Theme,
 };
 use native_dialog::{FileDialog, MessageDialog, MessageType};
 use uuid::Uuid;
 use worker::*;
 
 // mod import;
+mod icon;
 mod worker;
 mod xml;
 
@@ -33,7 +34,10 @@ pub struct AppData {
 }
 
 pub fn main() -> iced::Result {
-    AppData::run(Settings::default())
+    AppData::run(Settings {
+        default_font: Some(include_bytes!("../font/roboto.ttf")),
+        ..Default::default()
+    })
 }
 
 impl Application for AppData {
@@ -591,7 +595,7 @@ impl Worker {
             text(&self.birthdate).width(Length::Shrink),
             text(format!("{} {} {}", &self.zip, &self.city, &self.street))
                 .width(Length::Units(100)),
-            button(text("Szerk.")).on_press(RowAction::Edit(self.clone())),
+            button(icon::edit_icon()).on_press(RowAction::Edit(self.clone())),
         ]
         .spacing(20)
         .into()
