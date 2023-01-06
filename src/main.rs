@@ -2,7 +2,7 @@ use std::fs::File;
 use std::io::Write;
 
 use chrono::{Datelike, Local, NaiveDate, Timelike};
-use iced::widget::{self, button, checkbox, row, text, Text};
+use iced::widget::{self, button, checkbox, horizontal_space, row, text, Text};
 use iced::{
     alignment, event, keyboard, subscription, Application, Command, Element, Event, Font, Length,
     Settings, Subscription, Theme,
@@ -590,12 +590,15 @@ impl Worker {
 
         row![
             checkbox,
-            text(&self.name).width(Length::Units(100)),
-            text(&self.taj).width(Length::Units(50)),
+            text(&self.name).width(Length::FillPortion(2)),
+            text(&self.taj).width(Length::FillPortion(1)),
             text(&self.birthdate).width(Length::Shrink),
             text(format!("{} {} {}", &self.zip, &self.city, &self.street))
-                .width(Length::Units(100)),
-            button(icon::edit_icon()).on_press(RowAction::Edit(self.clone())),
+                .width(Length::FillPortion(2)),
+            button(icon::edit_icon())
+                .on_press(RowAction::Edit(self.clone()))
+                .width(Length::Shrink),
+            horizontal_space(Length::Units(10))
         ]
         .spacing(20)
         .into()
