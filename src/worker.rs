@@ -141,6 +141,7 @@ impl Data {
                 workers.push(worker);
             }
         }
+        workers.sort_by(|a, b| a.name.cmp(&b.name));
         let res = Self { workers, ctx };
         Ok(res)
     }
