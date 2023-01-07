@@ -1,18 +1,18 @@
 use std::fs::File;
 use std::io::Write;
 
-use chrono::{Datelike, Local, NaiveDate, Timelike};
-use iced::widget::{self, button, checkbox, horizontal_space, row, text, Column, Container, Text};
+use chrono::{Datelike, Local, Timelike};
+use iced::widget::{self, button, checkbox, horizontal_space, row, text};
 use iced::{
-    alignment, event, keyboard, subscription, Application, Command, Element, Event, Font, Length,
-    Settings, Size, Subscription, Theme,
+    event, keyboard, subscription, Application, Command, Element, Event, Length, Settings,
+    Subscription,
 };
-use native_dialog::{FileDialog, MessageDialog, MessageType};
+use native_dialog::FileDialog;
 use uuid::Uuid;
 use worker::*;
 
-// mod import;
 mod icon;
+mod style;
 mod worker;
 mod xml;
 
@@ -42,7 +42,7 @@ pub fn main() -> iced::Result {
 
 impl Application for AppData {
     type Message = Message;
-    type Theme = Theme;
+    type Theme = iced::Theme;
     type Executor = iced::executor::Default;
     type Flags = ();
 
@@ -204,7 +204,7 @@ impl Application for AppData {
         }
     }
 
-    fn view(&self) -> Element<'_, Self::Message> {
+    fn view(&self) -> Element<Message> {
         // .style(Container::from(style::menubar as for<'r> fn(&'r _) -> _))
         // let top = container(column(
         //     vec![
@@ -242,14 +242,12 @@ impl Application for AppData {
 }
 
 mod view {
+    use crate::Element;
     use crate::{AppData, Message, View};
-    use iced::widget::text::Appearance;
     use iced::widget::{
-        button, column, container, row, scrollable, text, text_input, vertical_space, Column, Row,
-        Rule, Text,
+        button, column, container, row, scrollable, text, text_input, vertical_space, Column, Rule,
     };
-    use iced::{Alignment, Element, Length, Renderer};
-    use iced_lazy::responsive;
+    use iced::{theme, Alignment, Length, Renderer};
 
     fn window(title: &str) -> Column<Message> {
         column(vec![text(title).size(40).into()])
@@ -257,7 +255,7 @@ mod view {
             .spacing(20)
     }
 
-    pub fn main_view(d: &AppData) -> Element<'_, Message> {
+    pub fn main_view(d: &AppData) -> Element<Message> {
         let filter = row![
             container(
                 text_input("Név keresése", &d.name_filter, Message::NameFilterChange)
@@ -306,10 +304,13 @@ mod view {
             button(text("ÁNYK Export").size(20))
                 .padding(10)
                 .on_press(Message::Export)
+                .style(theme::Button::Custom(Box::new(
+                    crate::style::ButtonStyle::default(),
+                )))
                 .into(),
             match selected.len() > 0 {
                 true => {
-                    let a: Vec<Element<'_, Message, Renderer>> = selected
+                    let a: Vec<Element<Message>> = selected
                         .into_iter()
                         .map(move |item| {
                             column![
@@ -337,6 +338,8 @@ mod view {
         .spacing(10)
         .padding(10);
 
+        // let right_panel = container(selected_panel).padding(40);
+
         let content = column![row![left_panel, selected_panel]]
             .spacing(20)
             .align_items(Alignment::Start);
@@ -347,7 +350,7 @@ mod view {
             .into()
     }
 
-    pub fn new_employee_view(d: &AppData) -> Element<'_, Message> {
+    pub fn new_employee_view(d: &AppData) -> Element<Message> {
         if let Some(worker) = &d.worker_selected {
             let mut buttons = vec![button(text("Vissza"))
                 .padding(10)
@@ -616,20 +619,5 @@ impl Worker {
         ]
         .spacing(20)
         .into()
-    }
-}
-
-mod style {
-    use iced::widget::container;
-    use iced::{Color, Theme};
-
-    pub fn menubar(theme: &Theme) -> container::Appearance {
-        let palette = theme.extended_palette();
-
-        container::Appearance {
-            text_color: Some(palette.background.strong.text),
-            background: Some(iced::Background::Color(Color::from_rgb(0.6, 0.6, 0.6))),
-            ..Default::default()
-        }
     }
 }
