@@ -13,3 +13,4 @@ chrono = { version = "0.4", features = ["serde"] }
 simple_xml_serialize = "*"
 native-dialog = "0.6.3"
 uuid = {version="*", features=["v4", "serde"]}
+iced_lazy = "*"

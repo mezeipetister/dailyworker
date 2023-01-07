@@ -2,10 +2,10 @@ use std::fs::File;
 use std::io::Write;
 
 use chrono::{Datelike, Local, NaiveDate, Timelike};
-use iced::widget::{self, button, checkbox, horizontal_space, row, text, Text};
+use iced::widget::{self, button, checkbox, horizontal_space, row, text, Column, Container, Text};
 use iced::{
     alignment, event, keyboard, subscription, Application, Command, Element, Event, Font, Length,
-    Settings, Subscription, Theme,
+    Settings, Size, Subscription, Theme,
 };
 use native_dialog::{FileDialog, MessageDialog, MessageType};
 use uuid::Uuid;
@@ -249,6 +249,7 @@ mod view {
         Rule, Text,
     };
     use iced::{Alignment, Element, Length, Renderer};
+    use iced_lazy::responsive;
 
     fn window(title: &str) -> Column<Message> {
         column(vec![text(title).size(40).into()])
