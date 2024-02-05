@@ -1,0 +1,9 @@
+[Desktop Entry]
+Version=1.0
+Name=ÁNYK Export
+GenericName=ÁNYK Export
+Comment=Export segédlet ÁNYK napi bejelentéshez
+Terminal=false
+Type=Application
+Categories=Utility
+Keywords=Flutter;share;files;

@@ -1,0 +1,17 @@
+flutter_app:
+  command: anykexport
+  arch: x64
+  parent: /usr/local/lib
+  nonInteractive: true
+
+control:
+  Package: anykexport
+  Version: 1.0.0
+  Architecture: amd64
+  Priority: optional
+  Depends:
+  Maintainer:
+  Description: ÁNYK Export napi bejelentés
+
+options:
+  exec_out_dir: debian/packages
