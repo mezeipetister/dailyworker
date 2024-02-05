@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:core';
 import 'package:confirm_dialog/confirm_dialog.dart';
 import 'package:anykexport/table.dart';
@@ -18,7 +17,7 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
         home: Scaffold(
       body: Center(
         child: Demo(),
@@ -28,6 +27,8 @@ class MyApp extends StatelessWidget {
 }
 
 class Demo extends StatefulWidget {
+  const Demo({super.key});
+
   @override
   _State createState() => _State();
 }
@@ -57,10 +58,10 @@ class _State extends State<Demo> {
   Future<void> addEmptyWorker() async {
     debugPrint('Adding empty worker');
     if (!await confirm(context,
-        title: Text('Biztos?'),
-        content: Text('Biztosan létrehozod az új munkavállalót?'),
-        textOK: Text('Létrehozás'),
-        textCancel: Text('Mégsem'))) {
+        title: const Text('Biztos?'),
+        content: const Text('Biztosan létrehozod az új munkavállalót?'),
+        textOK: const Text('Létrehozás'),
+        textCancel: const Text('Mégsem'))) {
       return;
     }
     Worker worker = getEmptyWorker();
@@ -72,10 +73,10 @@ class _State extends State<Demo> {
 
   Future<void> deleteWorker(Worker worker) async {
     if (!await confirm(context,
-        title: Text('Biztosan törlöd?'),
-        content: Text('Nincs mód visszavonni a műveletet!'),
-        textOK: Text('Törlés'),
-        textCancel: Text('Mégsem'))) {
+        title: const Text('Biztosan törlöd?'),
+        content: const Text('Nincs mód visszavonni a műveletet!'),
+        textOK: const Text('Törlés'),
+        textCancel: const Text('Mégsem'))) {
       return;
     }
     setState(() {
@@ -129,24 +130,24 @@ class _State extends State<Demo> {
         children: [
           Expanded(
               child: Padding(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Row(
                     mainAxisSize: MainAxisSize.max,
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       OutlinedButton(
                           onPressed: addEmptyWorker,
-                          child: Text('Új'),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.white,
                             foregroundColor: Colors.black,
                             shadowColor: Colors.yellow,
-                          )),
+                          ),
+                          child: const Text('Új')),
                       SizedBox(
                         width: 300,
                         height: 40,
@@ -157,11 +158,11 @@ class _State extends State<Demo> {
                             },
                             focusNode: myFocusNode,
                             obscureText: false,
-                            decoration: InputDecoration(
+                            decoration: const InputDecoration(
                               border: OutlineInputBorder(),
                               labelText: 'Szűrés',
                             ),
-                            style: TextStyle(fontSize: 12, height: 1)),
+                            style: const TextStyle(fontSize: 12, height: 1)),
                       )
                     ],
                   ),
@@ -179,13 +180,13 @@ class _State extends State<Demo> {
           )),
           Expanded(
               child: Padding(
-            padding: EdgeInsets.all(15),
+            padding: const EdgeInsets.all(15),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Row(
                     mainAxisSize: MainAxisSize.max,
                     mainAxisAlignment: MainAxisAlignment.start,

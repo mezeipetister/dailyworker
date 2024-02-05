@@ -1,7 +1,5 @@
 import 'dart:core';
-import 'package:confirm_dialog/confirm_dialog.dart';
 import 'package:data_table_2/data_table_2.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:anykexport/src/rust/api/worker.dart';
 
@@ -31,34 +29,34 @@ class DataTable2SimpleDemo extends StatelessWidget {
             minWidth: 300,
             columns: full
                 ? [
-                    DataColumn2(
+                    const DataColumn2(
                       label: Text(''),
                       size: ColumnSize.S,
                     ),
-                    DataColumn2(label: Text('Név'), size: ColumnSize.L),
-                    DataColumn2(
+                    const DataColumn2(label: Text('Név'), size: ColumnSize.L),
+                    const DataColumn2(
                       label: Text('Lakcím'),
                     ),
-                    DataColumn2(
+                    const DataColumn2(
                       label: Text('TAJ'),
                     ),
-                    DataColumn2(
+                    const DataColumn2(
                       label: Text('Adószám'),
                     ),
-                    DataColumn2(
+                    const DataColumn2(
                       label: Text('Anyja neve'),
                     ),
-                    DataColumn2(label: Text(''))
+                    const DataColumn2(label: Text(''))
                   ]
                 : [
-                    DataColumn2(
+                    const DataColumn2(
                       label: Text(''),
                       size: ColumnSize.S,
                     ),
-                    DataColumn2(
+                    const DataColumn2(
                       label: Text('Name'),
                     ),
-                    DataColumn2(label: Text(''))
+                    const DataColumn2(label: Text(''))
                   ],
             rows: workers
                 .where((element) => full
@@ -134,7 +132,7 @@ class EditButton extends StatelessWidget {
     return showDialog<void>(
       context: context,
       builder: (BuildContext context) {
-        return new EditDialog(
+        return EditDialog(
           worker: worker,
           on_save: on_save,
           delete: delete,
@@ -151,10 +149,10 @@ class EditDialog extends StatelessWidget {
   final _formKey = GlobalKey<FormState>();
 
   EditDialog(
-      {required this.worker, required this.on_save, required this.delete}) {
-    this.on_save = on_save;
-    this.delete = delete;
-    this.worker = worker.cloned();
+      {super.key, required this.worker, required this.on_save, required this.delete}) {
+    on_save = on_save;
+    delete = delete;
+    worker = worker.cloned();
   }
 
   @override
@@ -167,7 +165,7 @@ class EditDialog extends StatelessWidget {
         child: Column(
           children: <Widget>[
             TextFormField(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Név',
               ),
               initialValue: worker.name,
@@ -183,7 +181,7 @@ class EditDialog extends StatelessWidget {
               },
             ),
             TextFormField(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Születésnap',
               ),
               initialValue: worker.birthdate,
@@ -203,7 +201,7 @@ class EditDialog extends StatelessWidget {
               },
             ),
             TextFormField(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Születés helye',
               ),
               initialValue: worker.birthplace,
@@ -218,7 +216,7 @@ class EditDialog extends StatelessWidget {
               },
             ),
             TextFormField(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Anyja neve',
               ),
               initialValue: worker.mothersname,
@@ -233,7 +231,7 @@ class EditDialog extends StatelessWidget {
               },
             ),
             TextFormField(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Irányítószám',
               ),
               initialValue: worker.zip,
@@ -241,10 +239,10 @@ class EditDialog extends StatelessWidget {
                 if (value!.isEmpty) {
                   return 'Kötelező az irányítószám';
                 }
-                if (double.tryParse(value!) == null) {
+                if (double.tryParse(value) == null) {
                   return 'Csak szám lehet!';
                 }
-                if (value!.length != 4) {
+                if (value.length != 4) {
                   return '4 számjegy kötelező';
                 }
                 return null;
@@ -254,7 +252,7 @@ class EditDialog extends StatelessWidget {
               },
             ),
             TextFormField(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Település',
               ),
               initialValue: worker.city,
@@ -269,7 +267,7 @@ class EditDialog extends StatelessWidget {
               },
             ),
             TextFormField(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Utca, házszám',
               ),
               initialValue: worker.street,
@@ -284,7 +282,7 @@ class EditDialog extends StatelessWidget {
               },
             ),
             TextFormField(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'TAJ',
               ),
               initialValue: worker.taj,
@@ -303,7 +301,7 @@ class EditDialog extends StatelessWidget {
               },
             ),
             TextFormField(
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Adószám',
               ),
               initialValue: worker.taxnumber,
